@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    @apply min-h-screen bg-[#0c1024] text-slate-50 leading-relaxed font-['Space_Grotesk','Inter','SF_Pro_Display','Segoe_UI',system-ui,-apple-system,sans-serif];
+    background: radial-gradient(circle at 30% 20%, rgba(158, 240, 255, 0.1), transparent 35%),
+      radial-gradient(circle at 80% 0%, rgba(165, 180, 252, 0.15), transparent 30%),
+      radial-gradient(circle at 60% 80%, rgba(94, 234, 212, 0.08), transparent 35%), #0c1024;
+  }
+}
