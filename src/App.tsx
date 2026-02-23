@@ -49,7 +49,7 @@ const watermarkPreset: Preset = {
   initialSettings: {
     text: 'KYC for booking on dates XYZ',
     angle: -32,
-    opacity: 0.14,
+    opacity: 0.33,
     fontSize: 34,
     spacingX: 180,
     spacingY: 180,
