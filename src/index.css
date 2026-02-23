@@ -103,6 +103,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.45rem;
+    cursor: pointer;
     border-radius: 0.8rem;
     padding: 0.62rem 0.95rem;
     font-size: 0.86rem;
@@ -159,6 +160,35 @@
     background: linear-gradient(180deg, rgba(56, 184, 225, 0.22), rgba(36, 76, 112, 0.2));
     box-shadow: inset 0 0 0 1px rgba(155, 246, 255, 0.6);
   }
+
+  .wm-toggle-label {
+    display: inline-block;
+  }
+
+  .wm-toggle-label-idle {
+    color: inherit;
+  }
+
+  .wm-toggle-label-active {
+    font-weight: 700;
+    letter-spacing: 0.012em;
+    color: #0a2b45;
+    background-image: linear-gradient(180deg, #1f5f85 0%, #114464 42%, #072f49 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: 0.35px rgba(5, 35, 57, 0.65);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 3px rgba(2, 24, 40, 0.42);
+    transform-origin: center;
+    animation: watermark-wordart-wobble 2.9s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wm-toggle-label-active {
+      animation: none;
+      transform: skewX(-7deg) rotate(-0.6deg);
+    }
+  }
 }
 
 @layer utilities {
@@ -171,6 +201,28 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes watermark-wordart-wobble {
+    0% {
+      transform: skewX(-9deg) rotate(-1.2deg) translateY(0);
+    }
+
+    25% {
+      transform: skewX(-5deg) rotate(0.65deg) translateY(-0.5px) scale(1.015);
+    }
+
+    50% {
+      transform: skewX(-10deg) rotate(-0.9deg) translateY(0.35px) scale(0.995);
+    }
+
+    75% {
+      transform: skewX(-6deg) rotate(0.5deg) translateY(-0.45px) scale(1.01);
+    }
+
+    100% {
+      transform: skewX(-9deg) rotate(-1.2deg) translateY(0);
     }
   }
 

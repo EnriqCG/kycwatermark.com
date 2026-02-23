@@ -405,7 +405,14 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
                   : 'text-slate-300 hover:bg-white/8'
               )}
             >
-              Watermarked
+              <span
+                className={cx(
+                  'wm-toggle-label',
+                  previewMode === 'watermarked' ? 'wm-toggle-label-active' : 'wm-toggle-label-idle'
+                )}
+              >
+                Watermarked
+              </span>
             </button>
           </div>
         </div>
