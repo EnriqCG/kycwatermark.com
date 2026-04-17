@@ -51,7 +51,7 @@ const watermarkPreset: Preset = {
     angle: -32,
     opacity: 0.33,
     fontSize: 34,
-    spacingX: 180,
+    spacingX: 520,
     spacingY: 180,
     color: '#0f172a',
     grayscale: true,
@@ -120,31 +120,45 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     [settings.fontSize]
   );
 
-  const lines = useMemo(
-    () => settings.text.split('\n').map((line) => line.trim()).filter((line) => line.length > 0),
-    [settings.text]
-  );
-
-  const textWidth = useMemo(() => {
-    if (lines.length === 0) return 0;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      return lines.reduce((maxWidth, line) => Math.max(maxWidth, line.length * settings.fontSize * 0.58), 0);
-    }
-    ctx.font = fontString;
-    return lines.reduce((maxWidth, line) => Math.max(maxWidth, ctx.measureText(line).width), 0);
-  }, [fontString, lines, settings.fontSize]);
-
-  const baseSpacingX = useMemo(
-    () => Math.max(settings.spacingX, settings.fontSize * 2.6),
+  const maxLineWidth = useMemo(
+    () => settings.spacingX - settings.fontSize * 0.6,
     [settings.spacingX, settings.fontSize]
   );
 
-  const baseSpacingY = useMemo(
-    () => Math.max(settings.spacingY, settings.fontSize * 2.6),
-    [settings.spacingY, settings.fontSize]
-  );
+  const { lines, textWidth } = useMemo(() => {
+    const text = settings.text.trim();
+    if (!text) return { lines: [], textWidth: 0 };
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      return { lines: [text], textWidth: text.length * settings.fontSize * 0.58 };
+    }
+
+    ctx.font = fontString;
+
+    const words = text.split(/\s+/);
+    const wrappedLines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      if (ctx.measureText(testLine).width > maxLineWidth && currentLine) {
+        wrappedLines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) wrappedLines.push(currentLine);
+
+    const measuredWidth = wrappedLines.reduce(
+      (max, line) => Math.max(max, ctx.measureText(line).width), 0
+    );
+
+    return { lines: wrappedLines, textWidth: measuredWidth };
+  }, [settings.text, fontString, maxLineWidth, settings.fontSize]);
 
   const verticalSpan = useMemo(() => {
     if (lines.length === 0) return settings.fontSize;
@@ -153,13 +167,13 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   }, [lines.length, settings.fontSize, settings.lineGap]);
 
   const effectiveSpacingX = useMemo(
-    () => Math.max(baseSpacingX, textWidth + settings.fontSize * 0.6),
-    [baseSpacingX, textWidth, settings.fontSize]
+    () => Math.max(settings.spacingX, textWidth + settings.fontSize * 0.6),
+    [settings.spacingX, textWidth, settings.fontSize]
   );
 
   const effectiveSpacingY = useMemo(
-    () => Math.max(baseSpacingY, verticalSpan + settings.fontSize * 0.6),
-    [baseSpacingY, verticalSpan, settings.fontSize]
+    () => Math.max(settings.spacingY, verticalSpan + settings.fontSize * 0.6),
+    [settings.spacingY, verticalSpan, settings.fontSize]
   );
 
   const imageStats = useMemo(() => {
@@ -524,15 +538,15 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
           <label className="control-card block">
             <div className="mb-2 flex items-center justify-between gap-3">
               <span className="text-sm font-semibold text-slate-50">Watermark text</span>
-              <span className="text-xs text-slate-300">One line per row</span>
+              <span className="text-xs text-slate-300">Auto-wraps when long</span>
             </div>
-            <textarea
+            <input
+              type="text"
               name="watermark-text"
-              rows={3}
               value={settings.text}
               onChange={(event) => updateSetting('text', event.target.value)}
               placeholder="KYC for booking on dates XYZ"
-              className="w-full min-h-[96px] resize-y rounded-xl border border-white/15 bg-slate-900/45 px-3 py-2.5 text-[15px] text-slate-50 placeholder:text-slate-400 focus:border-cyan-200/70 focus:outline-none"
+              className="w-full rounded-xl border border-white/15 bg-slate-900/45 px-3 py-2.5 text-[15px] text-slate-50 placeholder:text-slate-400 focus:border-cyan-200/70 focus:outline-none"
             />
           </label>
 
@@ -594,13 +608,15 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
           <RangeControl
             name="wm-line-gap"
             label="Line gap"
-            hint="Space between stacked lines"
+            hint="Space between wrapped lines"
             valueLabel={`${settings.lineGap}px`}
             min={6}
             max={40}
             step={1}
             value={settings.lineGap}
+            disabled={lines.length <= 1}
             onChange={(value) => updateSetting('lineGap', value)}
+            footer={lines.length <= 1 ? 'Type longer text to see wrapping' : undefined}
           />
 
           <label className="control-card flex items-center justify-between gap-3">
@@ -627,24 +643,24 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
             name="wm-spacing-x"
             label="Horizontal spacing"
             valueLabel={`${settings.spacingX}px`}
-            min={110}
-            max={320}
+            min={150}
+            max={800}
             step={5}
             value={settings.spacingX}
             onChange={(value) => updateSetting('spacingX', value)}
-            footer={`Effective after text fit: ${Math.round(effectiveSpacingX)}px`}
+            footer={`Effective: ${Math.round(effectiveSpacingX)}px`}
           />
 
           <RangeControl
             name="wm-spacing-y"
             label="Vertical spacing"
             valueLabel={`${settings.spacingY}px`}
-            min={110}
-            max={320}
+            min={80}
+            max={400}
             step={5}
             value={settings.spacingY}
             onChange={(value) => updateSetting('spacingY', value)}
-            footer={`Effective after line fit: ${Math.round(effectiveSpacingY)}px`}
+            footer={`Effective: ${Math.round(effectiveSpacingY)}px`}
           />
 
           <RangeControl
@@ -721,6 +737,7 @@ type RangeControlProps = {
   value: number;
   hint?: string;
   footer?: string;
+  disabled?: boolean;
   onChange: (value: number) => void;
 };
 
@@ -734,10 +751,11 @@ function RangeControl({
   value,
   hint,
   footer,
+  disabled,
   onChange
 }: RangeControlProps) {
   return (
-    <label className="control-card block">
+    <label className={cx('control-card block', disabled && 'opacity-45')}>
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-semibold text-slate-50">{label}</span>
         <span className="text-xs font-medium text-cyan-100">{valueLabel}</span>
@@ -752,6 +770,7 @@ function RangeControl({
         max={max}
         step={step}
         value={value}
+        disabled={disabled}
         onChange={(event) => onChange(Number(event.target.value))}
         className="range-input mt-3"
       />
