@@ -8,6 +8,8 @@ import {
   useState
 } from 'react';
 
+declare const __COMMIT_HASH__: string;
+
 type WatermarkSettings = {
   text: string;
   angle: number;
@@ -93,6 +95,10 @@ function App() {
       <main className="mt-8">
         <WatermarkStudio preset={watermarkPreset} />
       </main>
+
+      <footer className="mt-8 text-center text-xs text-slate-400/60">
+        {__COMMIT_HASH__}{import.meta.env.DEV ? '-dev' : ''}
+      </footer>
     </div>
   );
 }
