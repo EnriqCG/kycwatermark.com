@@ -49,7 +49,7 @@ const watermarkPreset: Preset = {
   hint: 'Start with low opacity, then tune spacing and offsets so key details remain readable.',
   downloadName: 'watermarked-id.png',
   initialSettings: {
-    text: 'KYC for booking on dates XYZ',
+    text: 'Only for verification at [Company]',
     angle: -32,
     opacity: 0.33,
     fontSize: 34,
@@ -95,6 +95,27 @@ function App() {
       <main className="mt-8">
         <WatermarkStudio preset={watermarkPreset} />
       </main>
+
+      <section className="glass-card mt-12 px-5 py-6 sm:px-7">
+        <h2 className="text-xl font-semibold text-slate-50">What is KYC Watermarker?</h2>
+        <p className="mt-3 text-sm leading-relaxed text-slate-200">
+          KYC Watermarker is a free, open-source tool that adds visible watermarks to identity
+          documents before you share them. All processing happens locally in your browser. Your
+          files are never uploaded to any server.
+        </p>
+        <h3 className="mt-5 text-base font-semibold text-slate-100">Why watermark your documents?</h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+          When you share ID documents for verification (KYC), adding a purpose-specific watermark
+          like "Only for verification at [Company Name]" helps prevent misuse if the document is
+          leaked or forwarded.
+        </p>
+        <h3 className="mt-5 text-base font-semibold text-slate-100">How it works</h3>
+        <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-slate-200">
+          <li>Upload or drag your ID image into the website</li>
+          <li>Customize the watermark text, opacity, angle, and spacing</li>
+          <li>Download the watermarked image as a PNG</li>
+        </ol>
+      </section>
 
       <footer className="mt-8 text-center text-xs text-slate-400/60">
         {__COMMIT_HASH__}{import.meta.env.DEV ? '-dev' : ''}
