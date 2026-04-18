@@ -41,6 +41,7 @@ type Notice = {
 type PreviewMode = 'original' | 'watermarked';
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+const REFERENCE_DIAGONAL = 1000;
 
 const watermarkPreset: Preset = {
   title: 'Document Watermark',
@@ -141,15 +142,29 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepth = useRef(0);
 
+  const scaleFactor = useMemo(() => {
+    if (!loadedImage) return 1;
+    const diag = Math.sqrt(loadedImage.naturalWidth ** 2 + loadedImage.naturalHeight ** 2);
+    return diag / REFERENCE_DIAGONAL;
+  }, [loadedImage]);
+
+  const scaledFontSize = settings.fontSize * scaleFactor;
+  const scaledSpacingX = settings.spacingX * scaleFactor;
+  const scaledSpacingY = settings.spacingY * scaleFactor;
+  const scaledLineGap = settings.lineGap * scaleFactor;
+  const scaledOffsetX = settings.offsetX * scaleFactor;
+  const scaledOffsetY = settings.offsetY * scaleFactor;
+  const scaledStagger = settings.stagger * scaleFactor;
+
   const fontString = useMemo(
     () =>
-      `600 ${settings.fontSize}px "Avenir Next", "Sora", "Manrope", "Trebuchet MS", "Segoe UI", sans-serif`,
-    [settings.fontSize]
+      `600 ${scaledFontSize}px "Avenir Next", "Sora", "Manrope", "Trebuchet MS", "Segoe UI", sans-serif`,
+    [scaledFontSize]
   );
 
   const maxLineWidth = useMemo(
-    () => settings.spacingX - settings.fontSize * 0.6,
-    [settings.spacingX, settings.fontSize]
+    () => scaledSpacingX - scaledFontSize * 0.6,
+    [scaledSpacingX, scaledFontSize]
   );
 
   const { lines, textWidth } = useMemo(() => {
@@ -160,7 +175,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
-      return { lines: [text], textWidth: text.length * settings.fontSize * 0.58 };
+      return { lines: [text], textWidth: text.length * scaledFontSize * 0.58 };
     }
 
     ctx.font = fontString;
@@ -185,22 +200,22 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     );
 
     return { lines: wrappedLines, textWidth: measuredWidth };
-  }, [settings.text, fontString, maxLineWidth, settings.fontSize]);
+  }, [settings.text, fontString, maxLineWidth, scaledFontSize]);
 
   const verticalSpan = useMemo(() => {
-    if (lines.length === 0) return settings.fontSize;
-    const lineHeight = settings.fontSize + settings.lineGap;
+    if (lines.length === 0) return scaledFontSize;
+    const lineHeight = scaledFontSize + scaledLineGap;
     return lineHeight * lines.length;
-  }, [lines.length, settings.fontSize, settings.lineGap]);
+  }, [lines.length, scaledFontSize, scaledLineGap]);
 
   const effectiveSpacingX = useMemo(
-    () => Math.max(settings.spacingX, textWidth + settings.fontSize * 0.6),
-    [settings.spacingX, textWidth, settings.fontSize]
+    () => Math.max(scaledSpacingX, textWidth + scaledFontSize * 0.6),
+    [scaledSpacingX, textWidth, scaledFontSize]
   );
 
   const effectiveSpacingY = useMemo(
-    () => Math.max(settings.spacingY, verticalSpan + settings.fontSize * 0.6),
-    [settings.spacingY, verticalSpan, settings.fontSize]
+    () => Math.max(scaledSpacingY, verticalSpan + scaledFontSize * 0.6),
+    [scaledSpacingY, verticalSpan, scaledFontSize]
   );
 
   const imageStats = useMemo(() => {
@@ -270,11 +285,11 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     context.textAlign = 'center';
     context.textBaseline = 'middle';
 
-    context.translate(canvas.width / 2 + settings.offsetX, canvas.height / 2 + settings.offsetY);
+    context.translate(canvas.width / 2 + scaledOffsetX, canvas.height / 2 + scaledOffsetY);
     context.rotate((Math.PI / 180) * settings.angle);
 
     const diagonal = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
-    const lineHeight = settings.fontSize + settings.lineGap;
+    const lineHeight = scaledFontSize + scaledLineGap;
     const rows: number[] = [];
 
     for (let y = -diagonal; y <= diagonal; y += effectiveSpacingY) {
@@ -284,7 +299,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     const centerRowIndex = Math.floor(rows.length / 2);
 
     rows.forEach((y, rowIndex) => {
-      const rowOffset = (rowIndex - centerRowIndex) * settings.stagger;
+      const rowOffset = (rowIndex - centerRowIndex) * scaledStagger;
 
       for (
         let x = -diagonal + rowOffset - effectiveSpacingX;
