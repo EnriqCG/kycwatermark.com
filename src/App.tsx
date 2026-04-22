@@ -51,6 +51,13 @@ type Notice = {
 
 type PreviewMode = 'original' | 'watermarked';
 
+type RedactionRect = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 const REFERENCE_DIAGONAL = 1000;
 
@@ -148,10 +155,15 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   const [previewMode, setPreviewMode] = useState<PreviewMode>('watermarked');
   const [isDragActive, setIsDragActive] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [redactEnabled, setRedactEnabled] = useState(true);
+  const [redactions, setRedactions] = useState<RedactionRect[]>([]);
+  const [activeRect, setActiveRect] = useState<RedactionRect | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepth = useRef(0);
+  const isDrawing = useRef(false);
+  const drawStart = useRef({ x: 0, y: 0 });
 
   const scaleFactor = useMemo(() => {
     if (!loadedImage) return 1;
@@ -241,6 +253,94 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     return `${baseName}-kyc-watermarked.png`;
   }, [fileName, preset.downloadName]);
 
+  const screenToCanvas = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const canvasAspect = canvas.width / canvas.height;
+    const cssAspect = rect.width / rect.height;
+
+    let renderWidth: number, renderHeight: number, offsetX: number, offsetY: number;
+    if (canvasAspect > cssAspect) {
+      renderWidth = rect.width;
+      renderHeight = rect.width / canvasAspect;
+      offsetX = 0;
+      offsetY = (rect.height - renderHeight) / 2;
+    } else {
+      renderHeight = rect.height;
+      renderWidth = rect.height * canvasAspect;
+      offsetX = (rect.width - renderWidth) / 2;
+      offsetY = 0;
+    }
+
+    return {
+      x: ((e.clientX - rect.left - offsetX) / renderWidth) * canvas.width,
+      y: ((e.clientY - rect.top - offsetY) / renderHeight) * canvas.height
+    };
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!redactEnabled || !loadedImage) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pos = screenToCanvas(e);
+    isDrawing.current = true;
+    drawStart.current = pos;
+    setActiveRect({ x: pos.x, y: pos.y, w: 0, h: 0 });
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing.current) return;
+    e.preventDefault();
+    const pos = screenToCanvas(e);
+    const start = drawStart.current;
+    setActiveRect({
+      x: Math.min(start.x, pos.x),
+      y: Math.min(start.y, pos.y),
+      w: Math.abs(pos.x - start.x),
+      h: Math.abs(pos.y - start.y)
+    });
+  };
+
+  const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    isDrawing.current = false;
+
+    const pos = screenToCanvas(e);
+    const start = drawStart.current;
+    const finalRect: RedactionRect = {
+      x: Math.min(start.x, pos.x),
+      y: Math.min(start.y, pos.y),
+      w: Math.abs(pos.x - start.x),
+      h: Math.abs(pos.y - start.y)
+    };
+
+    if (finalRect.w > 3 && finalRect.h > 3) {
+      setRedactions(prev => [...prev, finalRect]);
+    }
+    setActiveRect(null);
+  };
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDrawing.current) {
+        isDrawing.current = false;
+        setActiveRect(null);
+      }
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
+
+  useEffect(() => {
+    if (!redactEnabled) {
+      isDrawing.current = false;
+      setActiveRect(null);
+    }
+  }, [redactEnabled]);
+
   useEffect(() => {
     return () => {
       if (imageUrl) URL.revokeObjectURL(imageUrl);
@@ -285,6 +385,18 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
     context.restore();
 
+    if (previewMode === 'watermarked' && (redactions.length > 0 || activeRect)) {
+      context.save();
+      context.fillStyle = '#000000';
+      for (const r of redactions) {
+        context.fillRect(r.x, r.y, r.w, r.h);
+      }
+      if (activeRect) {
+        context.fillRect(activeRect.x, activeRect.y, activeRect.w, activeRect.h);
+      }
+      context.restore();
+    }
+
     if (previewMode !== 'watermarked' || lines.length === 0 || settings.opacity <= 0) {
       return;
     }
@@ -325,12 +437,14 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
     context.restore();
   }, [
+    activeRect,
     effectiveSpacingX,
     effectiveSpacingY,
     fontString,
     lines,
     loadedImage,
     previewMode,
+    redactions,
     settings
   ]);
 
@@ -358,6 +472,9 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
     setImageUrl(nextUrl);
     setFileName(file.name);
+    setRedactions([]);
+    setActiveRect(null);
+    isDrawing.current = false;
     setPreviewMode('watermarked');
     setNotice({ tone: 'info', message: `Loaded ${file.name}` });
   };
@@ -430,6 +547,9 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
   const resetSettings = () => {
     setSettings({ ...preset.initialSettings });
+    setRedactions([]);
+    setActiveRect(null);
+    isDrawing.current = false;
     setPreviewMode('watermarked');
     setNotice({ tone: 'info', message: 'Settings reset to default values.' });
   };
@@ -484,7 +604,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <button type="button" className="action-btn action-btn-muted" onClick={openFilePicker}>
             <UploadIcon className="h-4 w-4" />
             Upload image
@@ -509,6 +629,22 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
             <DownloadIcon className="h-4 w-4" />
             Download PNG
           </button>
+
+          <label
+            className={cx(
+              'ml-auto flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm',
+              loadedImage ? 'text-slate-200' : 'text-slate-400/60 cursor-not-allowed'
+            )}
+          >
+            <input
+              type="checkbox"
+              checked={redactEnabled}
+              onChange={(e) => setRedactEnabled(e.target.checked)}
+              disabled={!loadedImage}
+              className="h-4 w-4 accent-cyan-300"
+            />
+            <span className="font-medium">Redact mode</span>
+          </label>
         </div>
 
         <input
@@ -543,7 +679,13 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
           {loadedImage ? (
             <canvas
               ref={canvasRef}
-              className="max-h-[66vh] w-full rounded-xl border border-white/15 bg-[#0b1224] object-contain"
+              className={cx(
+                'max-h-[66vh] w-full rounded-xl border border-white/15 bg-[#0b1224] object-contain',
+                redactEnabled && 'cursor-crosshair'
+              )}
+              onMouseDown={handleCanvasMouseDown}
+              onMouseMove={handleCanvasMouseMove}
+              onMouseUp={handleCanvasMouseUp}
             />
           ) : (
             <div className="max-w-sm text-center text-slate-200">
