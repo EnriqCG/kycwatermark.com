@@ -957,21 +957,21 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
             Download PNG
           </button>
 
-          <label
+          <button
+            type="button"
             className={cx(
-              'ml-auto flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm',
-              loadedImage ? 'text-slate-200' : 'text-slate-400/60 cursor-not-allowed'
+              'action-btn ml-auto',
+              redactEnabled ? 'action-btn-redact-active' : 'action-btn-muted'
             )}
+            onClick={() => setRedactEnabled(!redactEnabled)}
+            disabled={!loadedImage}
           >
-            <input
-              type="checkbox"
-              checked={redactEnabled}
-              onChange={(e) => setRedactEnabled(e.target.checked)}
-              disabled={!loadedImage}
-              className="h-4 w-4 accent-cyan-300"
-            />
-            <span className="font-medium">Redact mode</span>
-          </label>
+            <span className={cx(
+              'inline-block h-2.5 w-2.5 rounded-full',
+              redactEnabled ? 'bg-cyan-300 shadow-[0_0_6px_rgba(103,232,249,0.6)]' : 'bg-slate-500'
+            )} />
+            Redact mode
+          </button>
 
         </div>
 
