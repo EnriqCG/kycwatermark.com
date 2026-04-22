@@ -2,6 +2,7 @@ import {
   ChangeEvent,
   DragEvent,
   ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -56,7 +57,14 @@ type RedactionRect = {
   y: number;
   w: number;
   h: number;
+  angle: number;
 };
+
+type InteractionMode = 'idle' | 'drawing' | 'moving' | 'rotating' | 'resizing';
+type EdgeZone = 'top' | 'bottom' | 'left' | 'right';
+type HitZone = 'handle' | 'delete' | EdgeZone | 'body';
+
+
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 const REFERENCE_DIAGONAL = 1000;
@@ -158,12 +166,16 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   const [redactEnabled, setRedactEnabled] = useState(true);
   const [redactions, setRedactions] = useState<RedactionRect[]>([]);
   const [activeRect, setActiveRect] = useState<RedactionRect | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepth = useRef(0);
-  const isDrawing = useRef(false);
-  const drawStart = useRef({ x: 0, y: 0 });
+  const interactionMode = useRef<InteractionMode>('idle');
+  const dragStart = useRef({ x: 0, y: 0 });
+  const dragRectSnapshot = useRef<RedactionRect | null>(null);
+  const dragAngleOffset = useRef(0);
+  const dragEdge = useRef<EdgeZone>('top');
 
   const scaleFactor = useMemo(() => {
     if (!loadedImage) return 1;
@@ -279,55 +291,257 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     };
   };
 
+  // --- Hit-testing helpers ---
+
+  const toLocal = (px: number, py: number, r: RedactionRect) => {
+    const cx = r.x + r.w / 2;
+    const cy = r.y + r.h / 2;
+    const cos = Math.cos(-r.angle);
+    const sin = Math.sin(-r.angle);
+    const dx = px - cx;
+    const dy = py - cy;
+    return { lx: dx * cos - dy * sin, ly: dx * sin + dy * cos };
+  };
+
+  const pointInRect = (px: number, py: number, r: RedactionRect) => {
+    const { lx, ly } = toLocal(px, py, r);
+    return Math.abs(lx) <= r.w / 2 && Math.abs(ly) <= r.h / 2;
+  };
+
+  const pointOnHandle = (px: number, py: number, r: RedactionRect, sf: number) => {
+    const cx = r.x + r.w / 2;
+    const cy = r.y + r.h / 2;
+    const dist = r.h / 2 + 20 * sf;
+    const hx = cx + dist * Math.sin(r.angle);
+    const hy = cy - dist * Math.cos(r.angle);
+    const hitRadius = 12 * sf;
+    return (px - hx) ** 2 + (py - hy) ** 2 <= hitRadius ** 2;
+  };
+
+  const pointOnDeleteHandle = (px: number, py: number, r: RedactionRect, sf: number) => {
+    const cx = r.x + r.w / 2;
+    const cy = r.y + r.h / 2;
+    const dist = r.h / 2 + 20 * sf;
+    const hx = cx - dist * Math.sin(r.angle);
+    const hy = cy + dist * Math.cos(r.angle);
+    const hitRadius = 12 * sf;
+    return (px - hx) ** 2 + (py - hy) ** 2 <= hitRadius ** 2;
+  };
+
+  const findEdgeZone = (px: number, py: number, r: RedactionRect, sf: number): EdgeZone | null => {
+    const { lx, ly } = toLocal(px, py, r);
+    const threshold = 8 * sf;
+    const hw = r.w / 2;
+    const hh = r.h / 2;
+    if (Math.abs(lx) > hw + threshold || Math.abs(ly) > hh + threshold) return null;
+    const dTop = Math.abs(ly + hh);
+    const dBottom = Math.abs(ly - hh);
+    const dLeft = Math.abs(lx + hw);
+    const dRight = Math.abs(lx - hw);
+    const min = Math.min(dTop, dBottom, dLeft, dRight);
+    if (min > threshold) return null;
+    if (min === dTop) return 'top';
+    if (min === dBottom) return 'bottom';
+    if (min === dLeft) return 'left';
+    return 'right';
+  };
+
+  const edgeCursor = (edge: EdgeZone, angle: number): string => {
+    const resizeAngle = (edge === 'top' || edge === 'bottom')
+      ? Math.PI / 2 + angle
+      : angle;
+    const norm = ((resizeAngle % Math.PI) + Math.PI) % Math.PI;
+    const sector = Math.round(norm / (Math.PI / 4)) % 4;
+    return ['ew-resize', 'nwse-resize', 'ns-resize', 'nesw-resize'][sector];
+  };
+
+  const findHitTarget = (px: number, py: number): { index: number; zone: HitZone } | null => {
+    if (selectedIndex !== null && selectedIndex < redactions.length) {
+      const r = redactions[selectedIndex];
+      if (pointOnHandle(px, py, r, scaleFactor)) {
+        return { index: selectedIndex, zone: 'handle' };
+      }
+      if (pointOnDeleteHandle(px, py, r, scaleFactor)) {
+        return { index: selectedIndex, zone: 'delete' };
+      }
+      const edge = findEdgeZone(px, py, r, scaleFactor);
+      if (edge) {
+        return { index: selectedIndex, zone: edge };
+      }
+    }
+    for (let i = redactions.length - 1; i >= 0; i--) {
+      if (pointInRect(px, py, redactions[i])) {
+        return { index: i, zone: 'body' };
+      }
+    }
+    return null;
+  };
+
+  const resizeRect = (snap: RedactionRect, pos: { x: number; y: number }, edge: EdgeZone): RedactionRect => {
+    const snapCx = snap.x + snap.w / 2;
+    const snapCy = snap.y + snap.h / 2;
+    const { lx, ly } = toLocal(pos.x, pos.y, snap);
+    const minSize = 6;
+
+    let newW = snap.w, newH = snap.h, shiftX = 0, shiftY = 0;
+
+    if (edge === 'right') {
+      const moved = Math.max(lx, -snap.w / 2 + minSize);
+      newW = moved + snap.w / 2;
+      shiftX = (moved - snap.w / 2) / 2;
+    } else if (edge === 'left') {
+      const moved = Math.min(lx, snap.w / 2 - minSize);
+      newW = snap.w / 2 - moved;
+      shiftX = (moved + snap.w / 2) / 2;
+    } else if (edge === 'bottom') {
+      const moved = Math.max(ly, -snap.h / 2 + minSize);
+      newH = moved + snap.h / 2;
+      shiftY = (moved - snap.h / 2) / 2;
+    } else {
+      const moved = Math.min(ly, snap.h / 2 - minSize);
+      newH = snap.h / 2 - moved;
+      shiftY = (moved + snap.h / 2) / 2;
+    }
+
+    const cosA = Math.cos(snap.angle);
+    const sinA = Math.sin(snap.angle);
+    const newCx = snapCx + shiftX * cosA - shiftY * sinA;
+    const newCy = snapCy + shiftX * sinA + shiftY * cosA;
+
+    return { x: newCx - newW / 2, y: newCy - newH / 2, w: newW, h: newH, angle: snap.angle };
+  };
+
+  // --- Mouse handlers ---
+
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!redactEnabled || !loadedImage) return;
     e.preventDefault();
     e.stopPropagation();
     const pos = screenToCanvas(e);
-    isDrawing.current = true;
-    drawStart.current = pos;
-    setActiveRect({ x: pos.x, y: pos.y, w: 0, h: 0 });
+    const hit = findHitTarget(pos.x, pos.y);
+
+    if (hit?.zone === 'delete') {
+      deleteSelectedRedaction();
+      return;
+    } else if (hit?.zone === 'handle') {
+      const r = redactions[hit.index];
+      const cx = r.x + r.w / 2;
+      const cy = r.y + r.h / 2;
+      const mouseAngle = Math.atan2(pos.x - cx, -(pos.y - cy));
+      interactionMode.current = 'rotating';
+      dragAngleOffset.current = mouseAngle - r.angle;
+      dragRectSnapshot.current = { ...r };
+      setSelectedIndex(hit.index);
+    } else if (hit?.zone === 'top' || hit?.zone === 'bottom' || hit?.zone === 'left' || hit?.zone === 'right') {
+      interactionMode.current = 'resizing';
+      dragEdge.current = hit.zone;
+      dragRectSnapshot.current = { ...redactions[hit.index] };
+      setSelectedIndex(hit.index);
+    } else if (hit?.zone === 'body') {
+      interactionMode.current = 'moving';
+      dragStart.current = pos;
+      dragRectSnapshot.current = { ...redactions[hit.index] };
+      setSelectedIndex(hit.index);
+    } else {
+      interactionMode.current = 'drawing';
+      dragStart.current = pos;
+      setSelectedIndex(null);
+      setActiveRect({ x: pos.x, y: pos.y, w: 0, h: 0, angle: 0 });
+    }
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing.current) return;
-    e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas || !redactEnabled || !loadedImage) return;
+
     const pos = screenToCanvas(e);
-    const start = drawStart.current;
-    setActiveRect({
-      x: Math.min(start.x, pos.x),
-      y: Math.min(start.y, pos.y),
-      w: Math.abs(pos.x - start.x),
-      h: Math.abs(pos.y - start.y)
-    });
+
+    if (interactionMode.current === 'idle') {
+      const hit = findHitTarget(pos.x, pos.y);
+      if (hit?.zone === 'handle') {
+        canvas.style.cursor = 'grab';
+      } else if (hit?.zone === 'delete') {
+        canvas.style.cursor = 'pointer';
+      } else if (hit?.zone === 'body') {
+        canvas.style.cursor = 'move';
+      } else if (hit) {
+        canvas.style.cursor = edgeCursor(hit.zone, redactions[hit.index].angle);
+      } else {
+        canvas.style.cursor = 'crosshair';
+      }
+      return;
+    }
+
+    e.preventDefault();
+
+    if (interactionMode.current === 'drawing') {
+      const start = dragStart.current;
+      setActiveRect({
+        x: Math.min(start.x, pos.x),
+        y: Math.min(start.y, pos.y),
+        w: Math.abs(pos.x - start.x),
+        h: Math.abs(pos.y - start.y),
+        angle: 0
+      });
+    } else if (interactionMode.current === 'moving' && selectedIndex !== null && dragRectSnapshot.current) {
+      const dx = pos.x - dragStart.current.x;
+      const dy = pos.y - dragStart.current.y;
+      const snap = dragRectSnapshot.current;
+      setRedactions(prev => prev.map((r, i) =>
+        i === selectedIndex ? { ...r, x: snap.x + dx, y: snap.y + dy } : r
+      ));
+    } else if (interactionMode.current === 'rotating' && selectedIndex !== null && dragRectSnapshot.current) {
+      const snap = dragRectSnapshot.current;
+      const cx = snap.x + snap.w / 2;
+      const cy = snap.y + snap.h / 2;
+      const mouseAngle = Math.atan2(pos.x - cx, -(pos.y - cy));
+      const newAngle = mouseAngle - dragAngleOffset.current;
+      setRedactions(prev => prev.map((r, i) =>
+        i === selectedIndex ? { ...r, angle: newAngle } : r
+      ));
+      canvas.style.cursor = 'grabbing';
+    } else if (interactionMode.current === 'resizing' && selectedIndex !== null && dragRectSnapshot.current) {
+      const newRect = resizeRect(dragRectSnapshot.current, pos, dragEdge.current);
+      setRedactions(prev => prev.map((r, i) => i === selectedIndex ? newRect : r));
+    }
   };
 
   const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing.current) return;
+    const mode = interactionMode.current;
+    if (mode === 'idle') return;
     e.preventDefault();
     e.stopPropagation();
-    isDrawing.current = false;
 
-    const pos = screenToCanvas(e);
-    const start = drawStart.current;
-    const finalRect: RedactionRect = {
-      x: Math.min(start.x, pos.x),
-      y: Math.min(start.y, pos.y),
-      w: Math.abs(pos.x - start.x),
-      h: Math.abs(pos.y - start.y)
-    };
+    if (mode === 'drawing') {
+      const pos = screenToCanvas(e);
+      const start = dragStart.current;
+      const finalRect: RedactionRect = {
+        x: Math.min(start.x, pos.x),
+        y: Math.min(start.y, pos.y),
+        w: Math.abs(pos.x - start.x),
+        h: Math.abs(pos.y - start.y),
+        angle: 0
+      };
 
-    if (finalRect.w > 3 && finalRect.h > 3) {
-      setRedactions(prev => [...prev, finalRect]);
+      if (finalRect.w > 3 && finalRect.h > 3) {
+        setRedactions(prev => {
+          setSelectedIndex(prev.length);
+          return [...prev, finalRect];
+        });
+      }
+      setActiveRect(null);
     }
-    setActiveRect(null);
+
+    interactionMode.current = 'idle';
+    dragRectSnapshot.current = null;
   };
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {
-      if (isDrawing.current) {
-        isDrawing.current = false;
+      if (interactionMode.current !== 'idle') {
+        interactionMode.current = 'idle';
         setActiveRect(null);
+        dragRectSnapshot.current = null;
       }
     };
     window.addEventListener('mouseup', handleGlobalMouseUp);
@@ -336,10 +550,17 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
   useEffect(() => {
     if (!redactEnabled) {
-      isDrawing.current = false;
+      interactionMode.current = 'idle';
       setActiveRect(null);
+      setSelectedIndex(null);
     }
   }, [redactEnabled]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.style.cursor = loadedImage && redactEnabled ? 'crosshair' : 'default';
+  }, [loadedImage, redactEnabled]);
 
   useEffect(() => {
     return () => {
@@ -367,75 +588,144 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     };
   }, [imageUrl]);
 
-  useEffect(() => {
+  const drawCanvas = useCallback((showSelectionUI: boolean) => {
     if (!loadedImage) return;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const context = canvas.getContext('2d');
     if (!context) return;
 
     canvas.width = loadedImage.naturalWidth;
     canvas.height = loadedImage.naturalHeight;
 
+    // Layer 1: Source image
     context.save();
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.filter = previewMode === 'watermarked' && settings.grayscale ? 'grayscale(100%)' : 'none';
     context.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
     context.restore();
 
-    if (previewMode === 'watermarked' && (redactions.length > 0 || activeRect)) {
+    if (previewMode !== 'watermarked') return;
+
+    // Layer 2: Redaction rectangles (rotated)
+    const allRects = activeRect ? [...redactions, activeRect] : redactions;
+    for (const r of allRects) {
       context.save();
+      const cx = r.x + r.w / 2;
+      const cy = r.y + r.h / 2;
+      context.translate(cx, cy);
+      context.rotate(r.angle);
       context.fillStyle = '#000000';
-      for (const r of redactions) {
-        context.fillRect(r.x, r.y, r.w, r.h);
-      }
-      if (activeRect) {
-        context.fillRect(activeRect.x, activeRect.y, activeRect.w, activeRect.h);
-      }
+      context.fillRect(-r.w / 2, -r.h / 2, r.w, r.h);
       context.restore();
     }
 
-    if (previewMode !== 'watermarked' || lines.length === 0 || settings.opacity <= 0) {
-      return;
-    }
+    // Layer 3: Watermark text
+    if (lines.length > 0 && settings.opacity > 0) {
+      context.save();
+      context.globalAlpha = settings.opacity;
+      context.fillStyle = settings.color;
+      context.font = fontString;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
 
-    context.save();
-    context.globalAlpha = settings.opacity;
-    context.fillStyle = settings.color;
-    context.font = fontString;
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
+      context.translate(canvas.width / 2 + scaledOffsetX, canvas.height / 2 + scaledOffsetY);
+      context.rotate((Math.PI / 180) * settings.angle);
 
-    context.translate(canvas.width / 2 + scaledOffsetX, canvas.height / 2 + scaledOffsetY);
-    context.rotate((Math.PI / 180) * settings.angle);
+      const diagonal = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
+      const lineHeight = scaledFontSize + scaledLineGap;
+      const rows: number[] = [];
 
-    const diagonal = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
-    const lineHeight = scaledFontSize + scaledLineGap;
-    const rows: number[] = [];
-
-    for (let y = -diagonal; y <= diagonal; y += effectiveSpacingY) {
-      rows.push(y);
-    }
-
-    const centerRowIndex = Math.floor(rows.length / 2);
-
-    rows.forEach((y, rowIndex) => {
-      const rowOffset = (rowIndex - centerRowIndex) * scaledStagger;
-
-      for (
-        let x = -diagonal + rowOffset - effectiveSpacingX;
-        x <= diagonal + effectiveSpacingX;
-        x += effectiveSpacingX
-      ) {
-        lines.forEach((line, lineIndex) => {
-          context.fillText(line, x, y + lineIndex * lineHeight);
-        });
+      for (let y = -diagonal; y <= diagonal; y += effectiveSpacingY) {
+        rows.push(y);
       }
-    });
 
-    context.restore();
+      const centerRowIndex = Math.floor(rows.length / 2);
+
+      rows.forEach((y, rowIndex) => {
+        const rowOffset = (rowIndex - centerRowIndex) * scaledStagger;
+
+        for (
+          let x = -diagonal + rowOffset - effectiveSpacingX;
+          x <= diagonal + effectiveSpacingX;
+          x += effectiveSpacingX
+        ) {
+          lines.forEach((line, lineIndex) => {
+            context.fillText(line, x, y + lineIndex * lineHeight);
+          });
+        }
+      });
+
+      context.restore();
+    }
+
+    // Layer 4: Selection UI overlay (not exported)
+    if (showSelectionUI && selectedIndex !== null && selectedIndex < redactions.length) {
+      const r = redactions[selectedIndex];
+      const cx = r.x + r.w / 2;
+      const cy = r.y + r.h / 2;
+      const sf = scaleFactor;
+      const handleDist = r.h / 2 + 20 * sf;
+      const handleRadius = 6 * sf;
+
+      context.save();
+      context.translate(cx, cy);
+      context.rotate(r.angle);
+
+      // Dashed selection border
+      context.strokeStyle = '#66e5ff';
+      context.lineWidth = 2 * sf;
+      context.setLineDash([6 * sf, 4 * sf]);
+      context.strokeRect(-r.w / 2, -r.h / 2, r.w, r.h);
+
+      // Stem line to handle
+      context.setLineDash([]);
+      context.lineWidth = 1.5 * sf;
+      context.beginPath();
+      context.moveTo(0, -r.h / 2);
+      context.lineTo(0, -handleDist);
+      context.stroke();
+
+      // Rotation handle circle
+      context.beginPath();
+      context.arc(0, -handleDist, handleRadius, 0, Math.PI * 2);
+      context.fillStyle = '#ffffff';
+      context.fill();
+      context.strokeStyle = '#66e5ff';
+      context.lineWidth = 2 * sf;
+      context.stroke();
+
+      // Stem line to delete handle
+      context.beginPath();
+      context.moveTo(0, r.h / 2);
+      context.lineTo(0, handleDist);
+      context.strokeStyle = 'rgba(244, 63, 94, 0.6)';
+      context.lineWidth = 1.5 * sf;
+      context.stroke();
+
+      // Delete handle circle
+      context.beginPath();
+      context.arc(0, handleDist, handleRadius, 0, Math.PI * 2);
+      context.fillStyle = 'rgba(244, 63, 94, 0.85)';
+      context.fill();
+      context.strokeStyle = 'rgba(254, 202, 202, 0.7)';
+      context.lineWidth = 1.5 * sf;
+      context.stroke();
+
+      // × symbol inside delete handle
+      const cs = handleRadius * 0.4;
+      context.strokeStyle = '#ffffff';
+      context.lineWidth = 1.8 * sf;
+      context.lineCap = 'round';
+      context.beginPath();
+      context.moveTo(-cs, handleDist - cs);
+      context.lineTo(cs, handleDist + cs);
+      context.moveTo(cs, handleDist - cs);
+      context.lineTo(-cs, handleDist + cs);
+      context.stroke();
+
+      context.restore();
+    }
   }, [
     activeRect,
     effectiveSpacingX,
@@ -445,8 +735,19 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     loadedImage,
     previewMode,
     redactions,
+    scaleFactor,
+    scaledFontSize,
+    scaledLineGap,
+    scaledOffsetX,
+    scaledOffsetY,
+    scaledStagger,
+    selectedIndex,
     settings
   ]);
+
+  useEffect(() => {
+    drawCanvas(true);
+  }, [drawCanvas]);
 
   const updateSetting = <K extends keyof WatermarkSettings>(
     key: K,
@@ -474,7 +775,8 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     setFileName(file.name);
     setRedactions([]);
     setActiveRect(null);
-    isDrawing.current = false;
+    setSelectedIndex(null);
+    interactionMode.current = 'idle';
     setPreviewMode('watermarked');
     setNotice({ tone: 'info', message: `Loaded ${file.name}` });
   };
@@ -525,12 +827,36 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     loadImageFile(event.dataTransfer.files?.[0]);
   };
 
+  const deleteSelectedRedaction = () => {
+    if (selectedIndex === null) return;
+    setRedactions(prev => prev.filter((_, i) => i !== selectedIndex));
+    setSelectedIndex(null);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedIndex === null) return;
+      if ((e.target as HTMLElement).tagName === 'INPUT') return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteSelectedRedaction();
+      } else if (e.key === 'Escape') {
+        setSelectedIndex(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
+
   const handleDownload = () => {
     const canvas = canvasRef.current;
     if (!canvas || !loadedImage) return;
 
+    drawCanvas(false);
+
     canvas.toBlob(
       (blob) => {
+        drawCanvas(true);
         if (!blob) return;
 
         const url = URL.createObjectURL(blob);
@@ -549,7 +875,8 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     setSettings({ ...preset.initialSettings });
     setRedactions([]);
     setActiveRect(null);
-    isDrawing.current = false;
+    setSelectedIndex(null);
+    interactionMode.current = 'idle';
     setPreviewMode('watermarked');
     setNotice({ tone: 'info', message: 'Settings reset to default values.' });
   };
@@ -645,6 +972,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
             />
             <span className="font-medium">Redact mode</span>
           </label>
+
         </div>
 
         <input
@@ -679,10 +1007,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
           {loadedImage ? (
             <canvas
               ref={canvasRef}
-              className={cx(
-                'max-h-[66vh] w-full rounded-xl border border-white/15 bg-[#0b1224] object-contain',
-                redactEnabled && 'cursor-crosshair'
-              )}
+              className="max-h-[66vh] w-full rounded-xl border border-white/15 bg-[#0b1224] object-contain"
               onMouseDown={handleCanvasMouseDown}
               onMouseMove={handleCanvasMouseMove}
               onMouseUp={handleCanvasMouseUp}
