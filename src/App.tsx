@@ -70,11 +70,11 @@ const watermarkPreset: Preset = {
   initialSettings: {
     text: 'Only for verification at [Company]',
     angle: -32,
-    opacity: 0.33,
+    opacity: 0.4,
     fontSize: 34,
     spacingX: 520,
     spacingY: 180,
-    color: '#0f172a',
+    color: '#353B46',
     grayscale: true,
     offsetX: 0,
     offsetY: 0,
