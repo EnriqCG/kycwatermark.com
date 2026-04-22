@@ -128,16 +128,18 @@ function App() {
       </main>
 
       <section className="glass-card mt-12 px-5 py-6 sm:px-7">
-        <h2 className="text-xl font-semibold text-slate-50">
-          What is KYC Watermarker?
-        </h2>
+        <h2 className="section-label">About</h2>
+        <h3 className="mt-2 text-xl font-semibold text-slate-50">
+          What is KYCWatermark.com
+        </h3>
         <p className="mt-3 text-sm leading-relaxed text-slate-200">
-          KYC Watermarker is a free, open-source tool that adds visible
+          KYCWatermark.com is a free, open-source tool that adds visible
           watermarks to identity documents before you share them. All processing
           happens locally in your browser. Your files are never uploaded to any
           server.
         </p>
-        <h3 className="mt-5 text-base font-semibold text-slate-100">
+
+        <h3 className="mt-5 text-xl font-semibold text-slate-100">
           Why watermark your documents?
         </h3>
         <p className="mt-2 text-sm leading-relaxed text-slate-200">
@@ -145,14 +147,82 @@ function App() {
           purpose-specific watermark like "Only for verification at [Company
           Name]" helps prevent misuse if the document is leaked or forwarded.
         </p>
-        <h3 className="mt-5 text-base font-semibold text-slate-100">
+
+        <h3 className="mt-5 text-xl font-semibold text-slate-100">
           How it works
         </h3>
         <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-slate-200">
           <li>Upload or drag your ID image into the website</li>
+          <li>Optionally redact parts of your document</li>
           <li>Customize the watermark text, opacity, angle, and spacing</li>
           <li>Download the watermarked image as a PNG</li>
         </ol>
+
+        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+          Is my data safe?
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+          Yes. Everything runs entirely in your browser. Your image never leaves
+          your device, and no data is sent to any server.
+        </p>
+
+        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+          Is this really free?
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+          Yes. There are no fees, no accounts, and no usage limits. The project
+          is open source and can be publicly audited in{" "}
+          <a
+            href="https://github.com/EnriqCG/kycwatermark.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan-300 underline underline-offset-2 transition hover:text-cyan-200"
+          >
+            GitHub
+          </a>
+          .
+        </p>
+
+        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+          What file types can I use?
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+          PNG, JPG, WebP, and HEIC images.
+        </p>
+
+        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+          Can I use this on my phone?
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+          Yes. The tool works in any modern browser on mobile, tablet, or
+          desktop. No app installation is needed.
+        </p>
+
+        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+          What is the redact feature for?
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+          It lets you draw black rectangles over sensitive fields (like ID
+          numbers or addresses) before applying the watermark, so you only share
+          what is strictly necessary.
+        </p>
+
+        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+          Who built this and why?
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+          It was built because sharing raw, unmarked identity documents online
+          is risky. The goal is to give everyone a simple, privacy-first way to
+          protect their documents before sending them out.
+        </p>
+
+        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+          Can I use this for non-KYC documents?
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+          Absolutely. You can watermark contracts, certificates, invoices, or
+          any image you want to protect from unauthorized reuse.
+        </p>
       </section>
 
       <footer className="mt-8 text-center text-xs text-slate-400/60">
