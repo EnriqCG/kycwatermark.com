@@ -1,9 +1,9 @@
-import { execSync } from 'child_process';
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite'
+import { execSync } from "node:child_process";
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 
-const commitHash = execSync('git rev-parse --short HEAD').toString().trim();
+const commitHash = execSync("git rev-parse --short HEAD").toString().trim();
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -11,6 +11,6 @@ export default defineConfig({
     __COMMIT_HASH__: JSON.stringify(commitHash),
   },
   server: {
-    port: 5173
-  }
+    port: 5173,
+  },
 });
