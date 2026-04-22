@@ -139,6 +139,17 @@
     box-shadow: 0 14px 30px rgba(27, 141, 194, 0.4);
   }
 
+  .action-btn-redact-active {
+    border: 1px solid rgba(103, 232, 249, 0.5);
+    background: rgba(103, 232, 249, 0.12);
+    color: #67e8f9;
+  }
+
+  .action-btn-redact-active:hover {
+    border-color: rgba(103, 232, 249, 0.7);
+    background: rgba(103, 232, 249, 0.18);
+  }
+
   .control-card {
     border: 1px solid rgba(171, 194, 228, 0.21);
     border-radius: 1rem;
