@@ -7,6 +7,17 @@ import {
   useRef,
   useState
 } from 'react';
+import cx from './cx';
+import ExternalLinkIcon from './icon/ExternalLinkIcon';
+import NoUploadIcon from './icon/NoUploadIcon';
+import EyeIcon from './icon/EyeIcon';
+import UploadIcon from './icon/UploadIcon';
+import RotateIcon from './icon/RotateIcon';
+import DownloadIcon from './icon/DownloadIcon';
+import TypeIcon from './icon/TypeIcon';
+import TypographyIcon from './icon/TypographyIcon';
+import PatternIcon from './icon/PatternIcon';
+import GitHubIcon from './icon/GithubIcon';
 
 declare const __COMMIT_HASH__: string;
 
@@ -82,13 +93,13 @@ function App() {
 
           <div className="flex flex-wrap gap-2">
             <TrustPill
-              icon={<IconShield className="h-4 w-4" />}
+              icon={<GitHubIcon className="h-4 w-4" />}
               text="Open source"
               href="https://github.com/EnriqCG/kycwatermark.com"
-              trailingIcon={<IconExternalLink className="h-3.5 w-3.5" />}
+              trailingIcon={<ExternalLinkIcon className="h-3.5 w-3.5" />}
             />
-            <TrustPill icon={<IconNoUpload className="h-4 w-4" />} text="Local. No uploads" />
-            <TrustPill icon={<IconEye className="h-4 w-4" />} text="Interactive controls" />
+            <TrustPill icon={<NoUploadIcon className="h-4 w-4" />} text="Local. No uploads" />
+            <TrustPill icon={<EyeIcon className="h-4 w-4" />} text="Interactive controls" />
           </div>
         </div>
       </header>
@@ -475,7 +486,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" className="action-btn action-btn-muted" onClick={openFilePicker}>
-            <IconUpload className="h-4 w-4" />
+            <UploadIcon className="h-4 w-4" />
             Upload image
           </button>
 
@@ -485,7 +496,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
             onClick={resetSettings}
             aria-label="Reset settings"
           >
-            <IconRotate className="h-4 w-4" />
+            <RotateIcon className="h-4 w-4" />
             Reset controls
           </button>
 
@@ -495,7 +506,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
             onClick={handleDownload}
             disabled={!loadedImage}
           >
-            <IconDownload className="h-4 w-4" />
+            <DownloadIcon className="h-4 w-4" />
             Download PNG
           </button>
         </div>
@@ -537,7 +548,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
           ) : (
             <div className="max-w-sm text-center text-slate-200">
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-cyan-200/30 bg-cyan-300/10">
-                <IconUpload className="h-6 w-6 text-cyan-100" />
+                <UploadIcon className="h-6 w-6 text-cyan-100" />
               </div>
               <p className="mt-4 text-lg font-semibold text-slate-50">Drop your ID image here</p>
               <p className="mt-1 text-sm text-slate-300">or click to pick a file from your device</p>
@@ -573,7 +584,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <ControlSection
-          icon={<IconType className="h-5 w-5" />}
+          icon={<TypeIcon className="h-5 w-5" />}
           title="Text and visibility"
           subtitle="Define message, angle, and opacity first."
         >
@@ -632,7 +643,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
         </ControlSection>
 
         <ControlSection
-          icon={<IconTypography className="h-5 w-5" />}
+          icon={<TypographyIcon className="h-5 w-5" />}
           title="Typography and color"
           subtitle="Tune style without overpowering document data."
         >
@@ -677,7 +688,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
         </ControlSection>
 
         <ControlSection
-          icon={<IconPattern className="h-5 w-5" />}
+          icon={<PatternIcon className="h-5 w-5" />}
           title="Pattern geometry"
           subtitle="Control how often and where text repeats."
         >
@@ -846,220 +857,6 @@ function TrustPill({ icon, text, href, trailingIcon }: TrustPillProps) {
       <span>{text}</span>
     </span>
   );
-}
-
-type IconProps = {
-  className?: string;
-};
-
-function IconUpload({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <title>Upload icon</title>
-      <path d="M12 16V4" />
-      <path d="m7 9 5-5 5 5" />
-      <path d="M4 14.5v3.5A2 2 0 0 0 6 20h12a2 2 0 0 0 2-2v-3.5" />
-    </svg>
-  );
-}
-
-function IconDownload({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <title>Download icon</title>
-      <path d="M12 4v12" />
-      <path d="m17 11-5 5-5-5" />
-      <path d="M4 19h16" />
-    </svg>
-  );
-}
-
-function IconRotate({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <title>Reset icon</title>
-      <path d="M3 12a9 9 0 1 0 3-6.7" />
-      <path d="M3 3v5h5" />
-    </svg>
-  );
-}
-
-function IconShield({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <title>Code icon</title>
-      <polyline points="16 18 22 12 16 6" />
-      <polyline points="8 6 2 12 8 18" />
-    </svg>
-  );
-}
-
-function IconEye({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <title>Sliders icon</title>
-      <path d="M4 21v-7" />
-      <path d="M4 10V3" />
-      <path d="M12 21v-9" />
-      <path d="M12 8V3" />
-      <path d="M20 21v-5" />
-      <path d="M20 12V3" />
-      <path d="M1 14h6" />
-      <path d="M9 8h6" />
-      <path d="M17 16h6" />
-    </svg>
-  );
-}
-
-function IconNoUpload({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <title>Offline icon</title>
-      <path d="M12 20h.01" />
-      <path d="M8.5 16.429a5 5 0 0 1 7 0" />
-      <path d="M5 12.859a10 10 0 0 1 5.17-2.69" />
-      <path d="M19 12.859a10 10 0 0 0-2.007-1.523" />
-      <path d="M2 8.82a15 15 0 0 1 4.177-2.643" />
-      <path d="M22 8.82a15 15 0 0 0-11.288-3.764" />
-      <line x1="2" x2="22" y1="2" y2="22" />
-    </svg>
-  );
-}
-
-function IconExternalLink({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <title>External link icon</title>
-      <path d="M14 5h5v5" />
-      <path d="m10 14 9-9" />
-      <path d="M19 14v5H5V5h5" />
-    </svg>
-  );
-}
-
-function IconType({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <title>Text controls icon</title>
-      <path d="M4 7V4h16v3" />
-      <path d="M9 20h6" />
-      <path d="M12 4v16" />
-    </svg>
-  );
-}
-
-function IconTypography({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <title>Style controls icon</title>
-      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
-    </svg>
-  );
-}
-
-function IconPattern({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <title>Pattern controls icon</title>
-      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-      <path d="m3.3 7 8.7 5 8.7-5" />
-      <path d="M12 22V12" />
-    </svg>
-  );
-}
-
-function cx(...classNames: Array<string | false | undefined>) {
-  return classNames.filter(Boolean).join(' ');
 }
 
 export default App;
