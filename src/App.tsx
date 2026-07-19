@@ -73,7 +73,7 @@ const watermarkPreset: Preset = {
     spacingX: 520,
     spacingY: 180,
     color: "#353B46",
-    grayscale: true,
+    grayscale: false,
     offsetX: 0,
     offsetY: 0,
     lineGap: 12,
@@ -83,141 +83,132 @@ const watermarkPreset: Preset = {
 
 function App() {
   return (
-    <div className="mx-auto w-full max-w-[1180px] px-4 pb-16 pt-8 sm:px-6 lg:px-8">
-      <header className="glass-card animate-rise-in relative overflow-hidden px-5 py-5 sm:px-7 sm:py-6">
-        <div className="pointer-events-none absolute -right-14 -top-14 h-52 w-52 rounded-full bg-cyan-300/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 left-1/4 h-64 w-64 rounded-full bg-amber-200/10 blur-3xl" />
+    <div className="mx-auto w-full max-w-[1200px] px-4 pb-16 pt-5 sm:px-6 sm:pt-8 lg:px-8">
+      <header className="animate-rise-in flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="section-label">KYC Watermark</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+            Protect a document before sharing it
+          </h1>
+        </div>
 
-        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="section-label">KYC Watermark</p>
-            <h1 className="mt-2 text-3xl font-semibold leading-tight text-slate-50 sm:text-[2.35rem]">
-              Watermark documents or IDs
-            </h1>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <TrustPill
-              icon={<GitHubIcon className="h-4 w-4" />}
-              text="Open source"
-              href="https://github.com/EnriqCG/kycwatermark.com"
-              trailingIcon={<ExternalLinkIcon className="h-3.5 w-3.5" />}
-            />
-            <TrustPill
-              icon={<NoUploadIcon className="h-4 w-4" />}
-              text="Local. No uploads"
-            />
-            <TrustPill
-              icon={<EyeIcon className="h-4 w-4" />}
-              text="Interactive controls"
-            />
-          </div>
+        <div className="flex flex-wrap gap-2">
+          <TrustPill
+            icon={<GitHubIcon className="h-4 w-4" />}
+            text="Open source"
+            href="https://github.com/EnriqCG/kycwatermark.com"
+            trailingIcon={<ExternalLinkIcon className="h-3.5 w-3.5" />}
+          />
+          <TrustPill
+            icon={<NoUploadIcon className="h-4 w-4" />}
+            text="Private · No uploads"
+          />
         </div>
       </header>
 
-      <main className="mt-8">
+      <main className="mt-6">
         <WatermarkStudio preset={watermarkPreset} />
       </main>
 
-      <section className="glass-card mt-12 px-5 py-6 sm:px-7">
+      <section className="content-card mt-14 px-5 py-7 sm:px-8 sm:py-9">
         <h2 className="section-label">About</h2>
-        <h3 className="mt-2 text-xl font-semibold text-slate-50">
+        <h3 className="mt-2 text-xl font-semibold text-slate-950">
           What is KYCWatermark.com
         </h3>
-        <p className="mt-3 text-sm leading-relaxed text-slate-200">
+        <p className="mt-3 text-sm leading-relaxed text-slate-600">
           KYCWatermark.com is a free, open-source tool that adds visible
           watermarks to identity documents before you share them. All processing
           happens locally in your browser. Your files are never uploaded to any
           server.
         </p>
 
-        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+        <h3 className="mt-7 text-xl font-semibold text-slate-950">
           Why watermark your documents?
         </h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
           When you share ID documents for verification (KYC), adding a
           purpose-specific watermark like "Only for verification at [Company
           Name]" helps prevent misuse if the document is leaked or forwarded.
         </p>
 
-        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+        <h3 className="mt-7 text-xl font-semibold text-slate-950">
           How it works
         </h3>
-        <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-slate-200">
+        <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-slate-600">
           <li>Upload or drag your ID image into the website</li>
           <li>Optionally redact parts of your document</li>
           <li>Customize the watermark text, opacity, angle, and spacing</li>
           <li>Download the watermarked image as a PNG</li>
         </ol>
 
-        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+        <h3 className="mt-7 text-xl font-semibold text-slate-950">
           Is my data safe?
         </h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
           Yes. Everything runs entirely in your browser. Your image never leaves
           your device, and no data is sent to any server.
         </p>
 
-        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+        <h3 className="mt-7 text-xl font-semibold text-slate-950">
           Is this really free?
         </h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
           Yes. There are no fees, no accounts, and no usage limits. The project
           is open source and can be publicly audited in{" "}
           <a
             href="https://github.com/EnriqCG/kycwatermark.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-cyan-300 underline underline-offset-2 transition hover:text-cyan-200"
+            className="font-medium text-blue-700 underline underline-offset-2 transition hover:text-blue-800"
           >
             GitHub
           </a>
           .
         </p>
 
-        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+        <h3 className="mt-7 text-xl font-semibold text-slate-950">
           What file types can I use?
         </h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
           PNG, JPG, WebP, and HEIC images.
         </p>
 
-        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+        <h3 className="mt-7 text-xl font-semibold text-slate-950">
           Can I use this on my phone?
         </h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
           Yes. The tool works in any modern browser on mobile, tablet, or
           desktop. No app installation is needed.
         </p>
 
-        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+        <h3 className="mt-7 text-xl font-semibold text-slate-950">
           What is the redact feature for?
         </h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
           It lets you draw black rectangles over sensitive fields (like ID
           numbers or addresses) before applying the watermark, so you only share
           what is strictly necessary.
         </p>
 
-        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+        <h3 className="mt-7 text-xl font-semibold text-slate-950">
           Who built this and why?
         </h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
           It was built because sharing raw, unmarked identity documents online
           is risky. The goal is to give everyone a simple, privacy-first way to
           protect their documents before sending them out.
         </p>
 
-        <h3 className="mt-5 text-xl font-semibold text-slate-100">
+        <h3 className="mt-7 text-xl font-semibold text-slate-950">
           Can I use this for non-KYC documents?
         </h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-200">
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
           Absolutely. You can watermark contracts, certificates, invoices, or
           any image you want to protect from unauthorized reuse.
         </p>
       </section>
 
-      <footer className="mt-8 text-center text-xs text-slate-400/60">
+      <footer className="mt-8 text-center text-xs text-slate-400">
         {__COMMIT_HASH__}
         {import.meta.env.DEV ? "-dev" : ""}
       </footer>
@@ -239,7 +230,8 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   const [previewMode, setPreviewMode] = useState<PreviewMode>("watermarked");
   const [isDragActive, setIsDragActive] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [redactEnabled, setRedactEnabled] = useState(true);
+  const [redactEnabled, setRedactEnabled] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [redactions, setRedactions] = useState<RedactionRect[]>([]);
   const [activeRect, setActiveRect] = useState<RedactionRect | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -540,6 +532,16 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   }, [redactEnabled]);
 
   useEffect(() => {
+    if (!advancedOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAdvancedOpen(false);
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [advancedOpen]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     canvas.style.cursor =
@@ -733,6 +735,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     setSelectedIndex(null);
     interactionMode.current = "idle";
     setPreviewMode("watermarked");
+    setRedactEnabled(false);
     setNotice({ tone: "info", message: `Loaded ${file.name}` });
   };
 
@@ -833,382 +836,524 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     setSelectedIndex(null);
     interactionMode.current = "idle";
     setPreviewMode("watermarked");
+    setRedactEnabled(false);
     setNotice({ tone: "info", message: "Settings reset to default values." });
   };
 
-  const canClickDropArea = !loadedImage;
-
   return (
-    <section className="space-y-5">
-      <section className="glass-card p-4 sm:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="section-label">Preview</p>
-            <h2 className="mt-1 text-2xl font-semibold text-slate-50">
-              {preset.title}
-            </h2>
-            <p className="mt-2 text-sm text-slate-200">{preset.hint}</p>
-            <p className="mt-1 text-xs text-slate-300/90">
-              {fileName
-                ? `${fileName} · ${imageStats}`
-                : "Upload or drag an ID image into the canvas area."}
-            </p>
-          </div>
+    <section>
+      <input
+        ref={fileInputRef}
+        name="wm-file"
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
 
-          <div className="inline-flex rounded-xl border border-white/15 bg-slate-900/45 p-1">
-            <button
-              type="button"
-              onClick={() => setPreviewMode("original")}
-              className={cx(
-                "rounded-lg px-3 py-1.5 text-sm font-medium transition",
-                previewMode === "original"
-                  ? "bg-slate-200/90 text-slate-950"
-                  : "text-slate-300 hover:bg-white/8",
-              )}
-            >
-              Original
-            </button>
-            <button
-              type="button"
-              onClick={() => setPreviewMode("watermarked")}
-              className={cx(
-                "rounded-lg px-3 py-1.5 text-sm font-medium transition",
-                previewMode === "watermarked"
-                  ? "bg-cyan-200/90 text-slate-950"
-                  : "text-slate-300 hover:bg-white/8",
-              )}
-            >
-              <span
-                className={cx(
-                  "wm-toggle-label",
-                  previewMode === "watermarked"
-                    ? "wm-toggle-label-active"
-                    : "wm-toggle-label-idle",
-                )}
-              >
-                Watermarked
-              </span>
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+      {!loadedImage ? (
+        <section className="content-card overflow-hidden p-4 sm:p-6">
           <button
             type="button"
-            className="action-btn action-btn-muted"
+            className={cx(
+              "relative grid min-h-[390px] w-full place-items-center rounded-2xl border-2 border-dashed p-6 text-center transition sm:min-h-[480px]",
+              isDragActive
+                ? "border-blue-500 bg-blue-50"
+                : "border-slate-300 bg-slate-50/70 hover:border-blue-400 hover:bg-blue-50/40",
+            )}
             onClick={openFilePicker}
+            onDragEnter={handleDropAreaDragEnter}
+            onDragOver={handleDropAreaDragOver}
+            onDragLeave={handleDropAreaDragLeave}
+            onDrop={handleDropAreaDrop}
           >
-            <UploadIcon className="h-4 w-4" />
-            Upload image
-          </button>
-
-          <button
-            type="button"
-            className="action-btn action-btn-muted"
-            onClick={resetSettings}
-            aria-label="Reset settings"
-          >
-            <RotateIcon className="h-4 w-4" />
-            Reset controls
-          </button>
-
-          <button
-            type="button"
-            className="action-btn action-btn-primary"
-            onClick={handleDownload}
-            disabled={!loadedImage}
-          >
-            <DownloadIcon className="h-4 w-4" />
-            Download PNG
-          </button>
-
-          <button
-            type="button"
-            className={cx(
-              "action-btn ml-auto",
-              redactEnabled ? "action-btn-redact-active" : "action-btn-muted",
-            )}
-            onClick={() => setRedactEnabled(!redactEnabled)}
-            disabled={!loadedImage}
-          >
-            <span
-              className={cx(
-                "inline-block h-2.5 w-2.5 rounded-full",
-                redactEnabled
-                  ? "bg-cyan-300 shadow-[0_0_6px_rgba(103,232,249,0.6)]"
-                  : "bg-slate-500",
-              )}
-            />
-            Redact mode
-          </button>
-        </div>
-
-        <input
-          ref={fileInputRef}
-          name="wm-file"
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-
-        <button
-          type="button"
-          className={cx(
-            "relative mt-4 grid min-h-[330px] w-full place-items-center rounded-2xl border border-dashed bg-slate-950/30 p-3 text-left transition sm:min-h-[500px]",
-            isDragActive ? "drop-area-active" : "border-white/20",
-            canClickDropArea
-              ? "cursor-pointer hover:border-cyan-200/45"
-              : "cursor-default",
-          )}
-          aria-label={
-            canClickDropArea
-              ? "Drop an image here or click to upload"
-              : "Drop an image here to replace current upload"
-          }
-          aria-disabled={!canClickDropArea}
-          tabIndex={canClickDropArea ? 0 : -1}
-          onClick={canClickDropArea ? openFilePicker : undefined}
-          onDragEnter={handleDropAreaDragEnter}
-          onDragOver={handleDropAreaDragOver}
-          onDragLeave={handleDropAreaDragLeave}
-          onDrop={handleDropAreaDrop}
-        >
-          {loadedImage ? (
-            <canvas
-              ref={canvasRef}
-              className="max-h-[66vh] w-full rounded-xl border border-white/15 bg-[#0b1224] object-contain"
-              onMouseDown={handleCanvasMouseDown}
-              onMouseMove={handleCanvasMouseMove}
-              onMouseUp={handleCanvasMouseUp}
-            />
-          ) : (
-            <div className="max-w-sm text-center text-slate-200">
-              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-cyan-200/30 bg-cyan-300/10">
-                <UploadIcon className="h-6 w-6 text-cyan-100" />
+            <div className="max-w-md">
+              <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-blue-100 text-blue-700">
+                <UploadIcon className="h-7 w-7" />
               </div>
-              <p className="mt-4 text-lg font-semibold text-slate-50">
-                Drop your ID image here
+              <h2 className="mt-5 text-2xl font-semibold text-slate-950">
+                Choose a document
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                Select an image or drag it here to add a protective watermark.
               </p>
-              <p className="mt-1 text-sm text-slate-300">
-                or click to pick a file from your device
+              <span className="action-btn action-btn-primary mt-6">
+                Select image
+              </span>
+              <p className="mt-4 text-xs text-slate-500">
+                PNG, JPG, WebP or HEIC
+              </p>
+              <p className="mt-7 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800">
+                <NoUploadIcon className="h-4 w-4" />
+                Your document never leaves this device
               </p>
             </div>
+          </button>
+          {notice?.tone === "error" && (
+            <p className="notice-error mt-3">{notice.message}</p>
           )}
-
-          {isDragActive && (
-            <div className="pointer-events-none absolute inset-0 grid place-items-center rounded-2xl bg-cyan-300/10">
-              <p className="rounded-full border border-cyan-100/70 bg-slate-900/75 px-4 py-2 text-sm font-semibold text-cyan-100">
-                Drop image to apply watermark
-              </p>
+        </section>
+      ) : (
+        <section className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,0.8fr)]">
+          <section className="content-card min-w-0 p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="section-label">Document preview</p>
+                <p className="mt-1 truncate text-sm font-medium text-slate-700">
+                  {fileName}{" "}
+                  <span className="text-slate-400">· {imageStats}</span>
+                </p>
+              </div>
+              <fieldset className="segmented-control">
+                <legend className="sr-only">Preview mode</legend>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("original")}
+                  className={cx(previewMode === "original" && "is-active")}
+                  aria-pressed={previewMode === "original"}
+                  disabled={redactEnabled}
+                >
+                  Original
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("watermarked")}
+                  className={cx(previewMode === "watermarked" && "is-active")}
+                  aria-pressed={previewMode === "watermarked"}
+                >
+                  Protected
+                </button>
+              </fieldset>
             </div>
-          )}
-        </button>
 
-        {notice && (
-          <p
-            className={cx(
-              "mt-3 rounded-xl border px-3 py-2 text-sm",
-              notice.tone === "error"
-                ? "border-rose-200/50 bg-rose-300/10 text-rose-100"
-                : "border-cyan-200/40 bg-cyan-200/10 text-cyan-50",
+            {redactEnabled && (
+              <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p className="mr-auto text-sm text-amber-950">
+                  Drag over details you want to hide. Select a box to move,
+                  resize, rotate, or delete it.
+                </p>
+                <button
+                  type="button"
+                  className="action-btn action-btn-quiet"
+                  disabled={redactions.length === 0}
+                  onClick={() => {
+                    setRedactions((current) => current.slice(0, -1));
+                    setSelectedIndex(null);
+                  }}
+                >
+                  Undo
+                </button>
+                <button
+                  type="button"
+                  className="action-btn action-btn-quiet"
+                  disabled={redactions.length === 0}
+                  onClick={() => {
+                    setRedactions([]);
+                    setSelectedIndex(null);
+                  }}
+                >
+                  Clear all
+                </button>
+                <button
+                  type="button"
+                  className="action-btn action-btn-primary"
+                  onClick={() => setRedactEnabled(false)}
+                >
+                  Done
+                </button>
+              </div>
             )}
-          >
-            {notice.message}
-          </p>
-        )}
 
-        <p className="mt-2 text-xs text-slate-300/90">
-          Export name:{" "}
-          <span className="font-medium text-slate-100">{downloadFileName}</span>
-        </p>
-      </section>
+            <section
+              aria-label="Document preview and image drop area"
+              className={cx(
+                "relative mt-4 grid min-h-[330px] w-full place-items-center overflow-hidden rounded-2xl border bg-slate-100 p-3 transition sm:min-h-[500px]",
+                isDragActive ? "drop-area-active" : "border-slate-200",
+              )}
+              onDragEnter={handleDropAreaDragEnter}
+              onDragOver={handleDropAreaDragOver}
+              onDragLeave={handleDropAreaDragLeave}
+              onDrop={handleDropAreaDrop}
+            >
+              <canvas
+                ref={canvasRef}
+                className="max-h-[68vh] w-full rounded-lg bg-white object-contain shadow-sm"
+                onMouseDown={handleCanvasMouseDown}
+                onMouseMove={handleCanvasMouseMove}
+                onMouseUp={handleCanvasMouseUp}
+              />
+              {isDragActive && (
+                <div className="pointer-events-none absolute inset-0 grid place-items-center bg-blue-100/90">
+                  <p className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-blue-800 shadow-sm">
+                    Drop to replace the current image
+                  </p>
+                </div>
+              )}
+            </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <ControlSection
-          icon={<TypeIcon className="h-5 w-5" />}
-          title="Text and visibility"
-          subtitle="Define message, angle, and opacity first."
-        >
-          <label className="control-card block">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-slate-50">
-                Watermark text
-              </span>
-              <span className="text-xs text-slate-300">
-                Auto-wraps when long
-              </span>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="action-btn action-btn-quiet"
+                onClick={openFilePicker}
+              >
+                <UploadIcon className="h-4 w-4" />
+                Change image
+              </button>
+              <button
+                type="button"
+                className={cx(
+                  "action-btn",
+                  redactEnabled
+                    ? "action-btn-redact-active"
+                    : "action-btn-quiet",
+                )}
+                onClick={() => {
+                  setPreviewMode("watermarked");
+                  setRedactEnabled(!redactEnabled);
+                }}
+              >
+                Hide sensitive details
+                {redactions.length > 0 && (
+                  <span className="rounded-full bg-slate-900/10 px-1.5 py-0.5 text-[11px]">
+                    {redactions.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                className="action-btn action-btn-quiet"
+                disabled={redactEnabled}
+                onClick={() =>
+                  setPreviewMode((current) =>
+                    current === "original" ? "watermarked" : "original",
+                  )
+                }
+              >
+                <EyeIcon className="h-4 w-4" />
+                Compare original
+              </button>
             </div>
-            <input
-              type="text"
-              name="watermark-text"
-              value={settings.text}
-              onChange={(event) => updateSetting("text", event.target.value)}
-              placeholder="KYC for booking on dates XYZ"
-              className="w-full rounded-xl border border-white/15 bg-slate-900/45 px-3 py-2.5 text-[15px] text-slate-50 placeholder:text-slate-400 focus:border-cyan-200/70 focus:outline-none"
-            />
-          </label>
+          </section>
 
-          <RangeControl
-            name="wm-opacity"
-            label="Opacity"
-            hint="Keep details readable"
-            valueLabel={`${(settings.opacity * 100).toFixed(0)}%`}
-            min={0.05}
-            max={0.6}
-            step={0.01}
-            value={settings.opacity}
-            onChange={(value) => updateSetting("opacity", value)}
-          />
-
-          <RangeControl
-            name="wm-angle"
-            label="Angle"
-            hint="Diagonal watermark tilt"
-            valueLabel={`${settings.angle}deg`}
-            min={-60}
-            max={60}
-            step={1}
-            value={settings.angle}
-            onChange={(value) => updateSetting("angle", value)}
-          />
-
-          <label className="control-card flex items-center justify-between gap-3">
+          <aside className="content-card p-5 lg:sticky lg:top-5">
             <div>
-              <p className="text-sm font-semibold text-slate-50">
-                Grayscale source
-              </p>
-              <p className="mt-1 text-xs text-slate-300">
-                Useful when original colors reduce watermark contrast.
-              </p>
-            </div>
-            <input
-              name="wm-grayscale"
-              type="checkbox"
-              checked={settings.grayscale}
-              onChange={(event) =>
-                updateSetting("grayscale", event.target.checked)
-              }
-              className="h-5 w-5 accent-cyan-300"
-            />
-          </label>
-        </ControlSection>
-
-        <ControlSection
-          icon={<TypographyIcon className="h-5 w-5" />}
-          title="Typography and color"
-          subtitle="Tune style without overpowering document data."
-        >
-          <RangeControl
-            name="wm-font-size"
-            label="Font size"
-            valueLabel={`${settings.fontSize}px`}
-            min={18}
-            max={64}
-            step={1}
-            value={settings.fontSize}
-            onChange={(value) => updateSetting("fontSize", value)}
-          />
-
-          <RangeControl
-            name="wm-line-gap"
-            label="Line gap"
-            hint="Space between wrapped lines"
-            valueLabel={`${settings.lineGap}px`}
-            min={6}
-            max={40}
-            step={1}
-            value={settings.lineGap}
-            disabled={lines.length <= 1}
-            onChange={(value) => updateSetting("lineGap", value)}
-            footer={
-              lines.length <= 1 ? "Type longer text to see wrapping" : undefined
-            }
-          />
-
-          <label className="control-card flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-50">
-                Watermark color
-              </p>
-              <p className="mt-1 text-xs text-slate-300">
-                Current: {settings.color.toUpperCase()}
+              <p className="section-label">Watermark</p>
+              <h2 className="mt-1 text-xl font-semibold text-slate-950">
+                Make it yours
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                The recommended settings already provide balanced protection.
               </p>
             </div>
-            <input
-              name="wm-color"
-              type="color"
-              value={settings.color}
-              onChange={(event) => updateSetting("color", event.target.value)}
-              className="h-10 w-14 cursor-pointer rounded-lg border border-white/20 bg-transparent p-1"
-            />
-          </label>
-        </ControlSection>
 
-        <ControlSection
-          icon={<PatternIcon className="h-5 w-5" />}
-          title="Pattern geometry"
-          subtitle="Control how often and where text repeats."
+            <label className="mt-6 block">
+              <span className="field-label">Watermark text</span>
+              <input
+                type="text"
+                name="watermark-text"
+                value={settings.text}
+                onChange={(event) => updateSetting("text", event.target.value)}
+                placeholder="Only for verification at Company"
+                className="text-input mt-2"
+              />
+              <span className="mt-1.5 block text-xs text-slate-500">
+                Tip: include the company or purpose.
+              </span>
+            </label>
+
+            <fieldset className="mt-6">
+              <legend className="field-label">Watermark size</legend>
+              <div className="choice-grid mt-2">
+                {(
+                  [
+                    ["Small", 26],
+                    ["Medium", 34],
+                    ["Large", 46],
+                  ] as const
+                ).map(([label, value]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    className={cx(settings.fontSize === value && "is-active")}
+                    onClick={() => updateSetting("fontSize", value)}
+                    aria-pressed={settings.fontSize === value}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset className="mt-6">
+              <legend className="field-label">Visibility</legend>
+              <div className="choice-grid mt-2">
+                {(
+                  [
+                    ["Light", 0.22],
+                    ["Standard", 0.4],
+                    ["Strong", 0.55],
+                  ] as const
+                ).map(([label, value]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    className={cx(settings.opacity === value && "is-active")}
+                    onClick={() => updateSetting("opacity", value)}
+                    aria-pressed={settings.opacity === value}
+                  >
+                    {label}
+                    {label === "Standard" && <small>Recommended</small>}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <button
+              type="button"
+              className="mt-6 flex w-full items-center justify-between rounded-xl border border-slate-200 px-3.5 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+              onClick={() => setAdvancedOpen(true)}
+            >
+              Advanced settings
+              <span aria-hidden="true">›</span>
+            </button>
+
+            {notice?.tone === "error" && (
+              <p className="notice-error mt-4">{notice.message}</p>
+            )}
+
+            <div className="mt-6 border-t border-slate-200 pt-5">
+              <button
+                type="button"
+                className="action-btn action-btn-primary w-full py-3"
+                onClick={handleDownload}
+              >
+                <DownloadIcon className="h-4 w-4" />
+                Download protected image
+              </button>
+              <p className="mt-2 text-center text-xs text-slate-500">
+                PNG · Processed privately on your device
+              </p>
+            </div>
+          </aside>
+        </section>
+      )}
+
+      {advancedOpen && (
+        <div
+          className="fixed inset-0 z-50 flex justify-end"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Advanced watermark settings"
         >
-          <RangeControl
-            name="wm-spacing-x"
-            label="Horizontal spacing"
-            valueLabel={`${settings.spacingX}px`}
-            min={150}
-            max={800}
-            step={5}
-            value={settings.spacingX}
-            onChange={(value) => updateSetting("spacingX", value)}
-            footer={`Effective: ${Math.round(effectiveSpacingX)}px`}
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-950/35 backdrop-blur-[2px]"
+            onClick={() => setAdvancedOpen(false)}
+            aria-label="Close advanced settings"
           />
+          <aside className="relative h-full w-full max-w-xl overflow-y-auto bg-white p-5 shadow-2xl sm:p-7">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-5">
+              <div>
+                <p className="section-label">Fine-tune</p>
+                <h2 className="mt-1 text-2xl font-semibold text-slate-950">
+                  Advanced settings
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Changes appear in the preview immediately.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setAdvancedOpen(false)}
+                aria-label="Close advanced settings"
+              >
+                ×
+              </button>
+            </div>
 
-          <RangeControl
-            name="wm-spacing-y"
-            label="Vertical spacing"
-            valueLabel={`${settings.spacingY}px`}
-            min={80}
-            max={400}
-            step={5}
-            value={settings.spacingY}
-            onChange={(value) => updateSetting("spacingY", value)}
-            footer={`Effective: ${Math.round(effectiveSpacingY)}px`}
-          />
+            <div className="mt-6 space-y-5">
+              <ControlSection
+                icon={<TypeIcon className="h-5 w-5" />}
+                title="Appearance"
+                subtitle="Control contrast, direction, and document color."
+              >
+                <RangeControl
+                  name="wm-opacity"
+                  label="Visibility"
+                  hint="Keep document details readable"
+                  valueLabel={`${(settings.opacity * 100).toFixed(0)}%`}
+                  min={0.05}
+                  max={0.6}
+                  step={0.01}
+                  value={settings.opacity}
+                  onChange={(value) => updateSetting("opacity", value)}
+                />
+                <RangeControl
+                  name="wm-angle"
+                  label="Direction"
+                  hint="Angle of the repeated text"
+                  valueLabel={`${settings.angle}°`}
+                  min={-60}
+                  max={60}
+                  step={1}
+                  value={settings.angle}
+                  onChange={(value) => updateSetting("angle", value)}
+                />
+                <RangeControl
+                  name="wm-font-size"
+                  label="Text size"
+                  valueLabel={`${settings.fontSize}px`}
+                  min={18}
+                  max={64}
+                  step={1}
+                  value={settings.fontSize}
+                  onChange={(value) => updateSetting("fontSize", value)}
+                />
+                <RangeControl
+                  name="wm-line-gap"
+                  label="Wrapped-line spacing"
+                  valueLabel={`${settings.lineGap}px`}
+                  min={6}
+                  max={40}
+                  step={1}
+                  value={settings.lineGap}
+                  disabled={lines.length <= 1}
+                  onChange={(value) => updateSetting("lineGap", value)}
+                  footer={
+                    lines.length <= 1
+                      ? "Only applies when the text wraps"
+                      : undefined
+                  }
+                />
+                <label className="control-card flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      Watermark color
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {settings.color.toUpperCase()}
+                    </p>
+                  </div>
+                  <input
+                    name="wm-color"
+                    type="color"
+                    value={settings.color}
+                    onChange={(event) =>
+                      updateSetting("color", event.target.value)
+                    }
+                    className="h-10 w-14 cursor-pointer rounded-lg border border-slate-200 bg-transparent p-1"
+                  />
+                </label>
+                <label className="control-card flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      Black-and-white document
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Can improve watermark contrast.
+                    </p>
+                  </div>
+                  <input
+                    name="wm-grayscale"
+                    type="checkbox"
+                    checked={settings.grayscale}
+                    onChange={(event) =>
+                      updateSetting("grayscale", event.target.checked)
+                    }
+                    className="h-5 w-5 accent-blue-600"
+                  />
+                </label>
+              </ControlSection>
 
-          <RangeControl
-            name="wm-stagger"
-            label="Row stagger"
-            hint="Shift each row from center"
-            valueLabel={`${settings.stagger}px`}
-            min={-200}
-            max={200}
-            step={5}
-            value={settings.stagger}
-            onChange={(value) => updateSetting("stagger", value)}
-          />
+              <ControlSection
+                icon={<PatternIcon className="h-5 w-5" />}
+                title="Pattern"
+                subtitle="Control how often the watermark repeats."
+              >
+                <RangeControl
+                  name="wm-spacing-x"
+                  label="Horizontal gap"
+                  valueLabel={`${settings.spacingX}px`}
+                  min={150}
+                  max={800}
+                  step={5}
+                  value={settings.spacingX}
+                  onChange={(value) => updateSetting("spacingX", value)}
+                  footer={`Rendered gap: ${Math.round(effectiveSpacingX)}px`}
+                />
+                <RangeControl
+                  name="wm-spacing-y"
+                  label="Vertical gap"
+                  valueLabel={`${settings.spacingY}px`}
+                  min={80}
+                  max={400}
+                  step={5}
+                  value={settings.spacingY}
+                  onChange={(value) => updateSetting("spacingY", value)}
+                  footer={`Rendered gap: ${Math.round(effectiveSpacingY)}px`}
+                />
+                <RangeControl
+                  name="wm-stagger"
+                  label="Alternate-row shift"
+                  hint="Offsets every other row"
+                  valueLabel={`${settings.stagger}px`}
+                  min={-200}
+                  max={200}
+                  step={5}
+                  value={settings.stagger}
+                  onChange={(value) => updateSetting("stagger", value)}
+                />
+              </ControlSection>
 
-          <RangeControl
-            name="wm-offset-x"
-            label="Offset X"
-            valueLabel={`${settings.offsetX}px`}
-            min={-200}
-            max={200}
-            step={5}
-            value={settings.offsetX}
-            onChange={(value) => updateSetting("offsetX", value)}
-          />
+              <ControlSection
+                icon={<TypographyIcon className="h-5 w-5" />}
+                title="Position"
+                subtitle="Move the full watermark pattern."
+              >
+                <RangeControl
+                  name="wm-offset-x"
+                  label="Horizontal position"
+                  valueLabel={`${settings.offsetX}px`}
+                  min={-200}
+                  max={200}
+                  step={5}
+                  value={settings.offsetX}
+                  onChange={(value) => updateSetting("offsetX", value)}
+                />
+                <RangeControl
+                  name="wm-offset-y"
+                  label="Vertical position"
+                  valueLabel={`${settings.offsetY}px`}
+                  min={-200}
+                  max={200}
+                  step={5}
+                  value={settings.offsetY}
+                  onChange={(value) => updateSetting("offsetY", value)}
+                />
+              </ControlSection>
+            </div>
 
-          <RangeControl
-            name="wm-offset-y"
-            label="Offset Y"
-            valueLabel={`${settings.offsetY}px`}
-            min={-200}
-            max={200}
-            step={5}
-            value={settings.offsetY}
-            onChange={(value) => updateSetting("offsetY", value)}
-          />
-        </ControlSection>
-      </section>
+            <div className="sticky bottom-0 mt-6 flex gap-2 border-t border-slate-200 bg-white py-4">
+              <button
+                type="button"
+                className="action-btn action-btn-quiet"
+                onClick={resetSettings}
+              >
+                <RotateIcon className="h-4 w-4" /> Restore recommended
+              </button>
+              <button
+                type="button"
+                className="action-btn action-btn-primary ml-auto"
+                onClick={() => setAdvancedOpen(false)}
+              >
+                Done
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
     </section>
   );
 }
@@ -1227,14 +1372,14 @@ function ControlSection({
   children,
 }: ControlSectionProps) {
   return (
-    <section className="glass-card p-4 sm:p-5">
+    <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
       <div className="mb-3 flex items-start gap-3">
-        <span className="mt-0.5 grid h-9 w-9 place-items-center rounded-xl border border-cyan-200/35 bg-cyan-200/15 text-cyan-50">
+        <span className="mt-0.5 grid h-9 w-9 place-items-center rounded-xl bg-blue-100 text-blue-700">
           {icon}
         </span>
         <div>
-          <h3 className="text-base font-semibold text-slate-50">{title}</h3>
-          <p className="mt-0.5 text-xs text-slate-300">{subtitle}</p>
+          <h3 className="text-base font-semibold text-slate-950">{title}</h3>
+          <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>
         </div>
       </div>
 
@@ -1273,11 +1418,11 @@ function RangeControl({
   return (
     <label className={cx("control-card block", disabled && "opacity-45")}>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-semibold text-slate-50">{label}</span>
-        <span className="text-xs font-medium text-cyan-100">{valueLabel}</span>
+        <span className="text-sm font-semibold text-slate-900">{label}</span>
+        <span className="text-xs font-medium text-blue-700">{valueLabel}</span>
       </div>
 
-      {hint && <p className="mt-1 text-xs text-slate-300">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
 
       <input
         name={name}
@@ -1291,7 +1436,7 @@ function RangeControl({
         className="range-input mt-3"
       />
 
-      {footer && <p className="mt-1 text-xs text-slate-300">{footer}</p>}
+      {footer && <p className="mt-1 text-xs text-slate-500">{footer}</p>}
     </label>
   );
 }
