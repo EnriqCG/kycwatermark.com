@@ -11,7 +11,6 @@ import {
 import cx from "./cx";
 import DownloadIcon from "./icon/DownloadIcon";
 import ExternalLinkIcon from "./icon/ExternalLinkIcon";
-import EyeIcon from "./icon/EyeIcon";
 import GitHubIcon from "./icon/GithubIcon";
 import NoUploadIcon from "./icon/NoUploadIcon";
 import PatternIcon from "./icon/PatternIcon";
@@ -926,44 +925,6 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
               </fieldset>
             </div>
 
-            {redactEnabled && (
-              <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
-                <p className="mr-auto text-sm text-amber-950">
-                  Drag over details you want to hide. Select a box to move,
-                  resize, rotate, or delete it.
-                </p>
-                <button
-                  type="button"
-                  className="action-btn action-btn-quiet"
-                  disabled={redactions.length === 0}
-                  onClick={() => {
-                    setRedactions((current) => current.slice(0, -1));
-                    setSelectedIndex(null);
-                  }}
-                >
-                  Undo
-                </button>
-                <button
-                  type="button"
-                  className="action-btn action-btn-quiet"
-                  disabled={redactions.length === 0}
-                  onClick={() => {
-                    setRedactions([]);
-                    setSelectedIndex(null);
-                  }}
-                >
-                  Clear all
-                </button>
-                <button
-                  type="button"
-                  className="action-btn action-btn-primary"
-                  onClick={() => setRedactEnabled(false)}
-                >
-                  Done
-                </button>
-              </div>
-            )}
-
             <section
               aria-label="Document preview and image drop area"
               className={cx(
@@ -1020,103 +981,154 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
                   </span>
                 )}
               </button>
-              <button
-                type="button"
-                className="action-btn action-btn-quiet"
-                disabled={redactEnabled}
-                onClick={() =>
-                  setPreviewMode((current) =>
-                    current === "original" ? "watermarked" : "original",
-                  )
-                }
-              >
-                <EyeIcon className="h-4 w-4" />
-                Compare original
-              </button>
             </div>
           </section>
 
           <aside className="content-card p-5 lg:sticky lg:top-5">
             <div>
-              <p className="section-label">Watermark</p>
+              <p className="section-label">
+                {redactEnabled ? "Redaction" : "Watermark"}
+              </p>
               <h2 className="mt-1 text-xl font-semibold text-slate-950">
-                Make it yours
+                {redactEnabled ? "Hide sensitive details" : "Make it yours"}
               </h2>
               <p className="mt-1 text-sm text-slate-600">
-                The recommended settings already provide balanced protection.
+                {redactEnabled
+                  ? "Drag over any information you do not want to share."
+                  : "The recommended settings already provide balanced protection."}
               </p>
             </div>
 
-            <label className="mt-6 block">
-              <span className="field-label">Watermark text</span>
-              <input
-                type="text"
-                name="watermark-text"
-                value={settings.text}
-                onChange={(event) => updateSetting("text", event.target.value)}
-                placeholder="Only for verification at Company"
-                className="text-input mt-2"
-              />
-              <span className="mt-1.5 block text-xs text-slate-500">
-                Tip: include the company or purpose.
-              </span>
-            </label>
+            {redactEnabled ? (
+              <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-amber-950">
+                  How to redact
+                </p>
+                <ol className="mt-2 list-inside list-decimal space-y-2 text-sm leading-relaxed text-amber-900">
+                  <li>Drag over a detail to cover it</li>
+                  <li>Select a box to move, resize, rotate, or delete it</li>
+                  <li>Choose Done when you are finished</li>
+                </ol>
 
-            <fieldset className="mt-6">
-              <legend className="field-label">Watermark size</legend>
-              <div className="choice-grid mt-2">
-                {(
-                  [
-                    ["Small", 26],
-                    ["Medium", 34],
-                    ["Large", 46],
-                  ] as const
-                ).map(([label, value]) => (
+                <p className="mt-4 text-xs font-medium text-amber-800">
+                  {redactions.length === 0
+                    ? "No details hidden yet"
+                    : `${redactions.length} ${redactions.length === 1 ? "detail" : "details"} hidden`}
+                </p>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
                   <button
-                    key={label}
                     type="button"
-                    className={cx(settings.fontSize === value && "is-active")}
-                    onClick={() => updateSetting("fontSize", value)}
-                    aria-pressed={settings.fontSize === value}
+                    className="action-btn action-btn-quiet"
+                    disabled={redactions.length === 0}
+                    onClick={() => {
+                      setRedactions((current) => current.slice(0, -1));
+                      setSelectedIndex(null);
+                    }}
                   >
-                    {label}
+                    Undo last
                   </button>
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset className="mt-6">
-              <legend className="field-label">Visibility</legend>
-              <div className="choice-grid mt-2">
-                {(
-                  [
-                    ["Light", 0.22],
-                    ["Standard", 0.4],
-                    ["Strong", 0.55],
-                  ] as const
-                ).map(([label, value]) => (
                   <button
-                    key={label}
                     type="button"
-                    className={cx(settings.opacity === value && "is-active")}
-                    onClick={() => updateSetting("opacity", value)}
-                    aria-pressed={settings.opacity === value}
+                    className="action-btn action-btn-quiet"
+                    disabled={redactions.length === 0}
+                    onClick={() => {
+                      setRedactions([]);
+                      setSelectedIndex(null);
+                    }}
                   >
-                    {label}
-                    {label === "Standard" && <small>Recommended</small>}
+                    Clear all
                   </button>
-                ))}
-              </div>
-            </fieldset>
+                </div>
 
-            <button
-              type="button"
-              className="mt-6 flex w-full items-center justify-between rounded-xl border border-slate-200 px-3.5 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-              onClick={() => setAdvancedOpen(true)}
-            >
-              Advanced settings
-              <span aria-hidden="true">›</span>
-            </button>
+                <button
+                  type="button"
+                  className="action-btn action-btn-primary mt-3 w-full"
+                  onClick={() => setRedactEnabled(false)}
+                >
+                  Done redacting
+                </button>
+              </div>
+            ) : (
+              <>
+                <label className="mt-6 block">
+                  <span className="field-label">Watermark text</span>
+                  <input
+                    type="text"
+                    name="watermark-text"
+                    value={settings.text}
+                    onChange={(event) =>
+                      updateSetting("text", event.target.value)
+                    }
+                    placeholder="Only for verification at Company"
+                    className="text-input mt-2"
+                  />
+                  <span className="mt-1.5 block text-xs text-slate-500">
+                    Tip: include the company or purpose.
+                  </span>
+                </label>
+
+                <fieldset className="mt-6">
+                  <legend className="field-label">Watermark size</legend>
+                  <div className="choice-grid mt-2">
+                    {(
+                      [
+                        ["Small", 26],
+                        ["Medium", 34],
+                        ["Large", 46],
+                      ] as const
+                    ).map(([label, value]) => (
+                      <button
+                        key={label}
+                        type="button"
+                        className={cx(
+                          settings.fontSize === value && "is-active",
+                        )}
+                        onClick={() => updateSetting("fontSize", value)}
+                        aria-pressed={settings.fontSize === value}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <fieldset className="mt-6">
+                  <legend className="field-label">Visibility</legend>
+                  <div className="choice-grid mt-2">
+                    {(
+                      [
+                        ["Light", 0.22],
+                        ["Standard", 0.4],
+                        ["Strong", 0.55],
+                      ] as const
+                    ).map(([label, value]) => (
+                      <button
+                        key={label}
+                        type="button"
+                        className={cx(
+                          settings.opacity === value && "is-active",
+                        )}
+                        onClick={() => updateSetting("opacity", value)}
+                        aria-pressed={settings.opacity === value}
+                      >
+                        {label}
+                        {label === "Standard" && <small>Recommended</small>}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <button
+                  type="button"
+                  className="mt-6 flex w-full items-center justify-between rounded-xl border border-slate-200 px-3.5 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                  onClick={() => setAdvancedOpen(true)}
+                >
+                  Advanced settings
+                  <span aria-hidden="true">›</span>
+                </button>
+              </>
+            )}
 
             {notice?.tone === "error" && (
               <p className="notice-error mt-4">{notice.message}</p>
@@ -1152,8 +1164,8 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
             onClick={() => setAdvancedOpen(false)}
             aria-label="Close advanced settings"
           />
-          <aside className="relative h-full w-full max-w-xl overflow-y-auto bg-white p-5 shadow-2xl sm:p-7">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-5">
+          <aside className="relative flex h-full w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-7">
               <div>
                 <p className="section-label">Fine-tune</p>
                 <h2 className="mt-1 text-2xl font-semibold text-slate-950">
@@ -1173,7 +1185,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
               </button>
             </div>
 
-            <div className="mt-6 space-y-5">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-6 sm:px-7">
               <ControlSection
                 icon={<TypeIcon className="h-5 w-5" />}
                 title="Appearance"
@@ -1335,7 +1347,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
               </ControlSection>
             </div>
 
-            <div className="sticky bottom-0 mt-6 flex gap-2 border-t border-slate-200 bg-white py-4">
+            <div className="relative z-10 flex shrink-0 gap-2 border-t border-slate-200 bg-white px-5 py-4 shadow-[0_-8px_20px_rgba(15,23,42,0.06)] sm:px-7">
               <button
                 type="button"
                 className="action-btn action-btn-quiet"
