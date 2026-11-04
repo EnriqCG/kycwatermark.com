@@ -1,8 +1,34 @@
 @import "tailwindcss";
 
+@theme {
+  --color-ink: #0e1218;
+  --color-ink-2: #485162;
+  --color-ink-3: #667085;
+  --color-line: #e3e6eb;
+  --color-ground: #f6f7f9;
+  --color-accent: #2f5bea;
+  --color-accent-ink: #1f45c9;
+  --color-accent-soft: #edf1fe;
+  --color-success: #0e6b41;
+  --color-success-soft: #e7f5ec;
+  --font-sans:
+    "Geist Variable", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, Menlo, monospace;
+}
+
 @layer base {
   :root {
     color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
   }
 
   * {
@@ -13,16 +39,9 @@
     margin: 0;
     min-height: 100vh;
     line-height: 1.5;
-    color: #0f172a;
-    font-family:
-      "Avenir Next", "Sora", "Manrope", "Trebuchet MS", "Segoe UI", sans-serif;
-    background:
-      radial-gradient(
-        circle at 8% 0%,
-        rgba(219, 234, 254, 0.75),
-        transparent 28rem
-      ),
-      linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    color: var(--color-ink);
+    background: var(--color-ground);
+    -webkit-font-smoothing: antialiased;
   }
 
   button,
@@ -30,10 +49,27 @@
     font: inherit;
   }
 
+  button:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  /* Links inside running text; styled components set their own class. */
+  a:not([class]) {
+    color: var(--color-accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  a:not([class]):hover {
+    color: #16359e;
+  }
+
   button:focus-visible,
   input:focus-visible,
-  a:focus-visible {
-    outline: 3px solid rgba(37, 99, 235, 0.28);
+  a:focus-visible,
+  summary:focus-visible {
+    outline: 3px solid rgba(47, 91, 234, 0.35);
     outline-offset: 2px;
   }
 
@@ -42,50 +78,33 @@
   }
 
   ::selection {
-    background: #bfdbfe;
-    color: #172554;
+    background: #c9d6fb;
+    color: var(--color-ink);
   }
 }
 
 @layer components {
-  .content-card {
-    border: 1px solid #e2e8f0;
-    border-radius: 1.25rem;
-    background: rgba(255, 255, 255, 0.94);
-    box-shadow: 0 14px 40px rgba(15, 23, 42, 0.07);
-  }
-
   .section-label {
-    color: #2563eb;
-    font-size: 0.69rem;
-    font-weight: 700;
+    color: var(--color-accent);
+    font-size: 0.8125rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.08em;
   }
 
-  .trust-pill {
+  .nav-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.42rem;
-    border-radius: 999px;
-    border: 1px solid #dbe3ee;
-    background: rgba(255, 255, 255, 0.86);
-    color: #475569;
-    padding: 0.4rem 0.72rem;
-    font-size: 0.75rem;
-    font-weight: 600;
+    border-radius: 0.6rem;
+    padding: 0.625rem 0.75rem;
+    color: var(--color-ink-2);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition: color 160ms ease;
   }
 
-  .trust-pill-link {
-    text-decoration: none;
-    transition:
-      border-color 160ms ease,
-      color 160ms ease;
-  }
-
-  .trust-pill-link:hover {
-    border-color: #93c5fd;
-    color: #1d4ed8;
+  .nav-link:hover {
+    color: var(--color-ink);
   }
 
   .action-btn {
@@ -105,20 +124,27 @@
       transform 160ms ease;
   }
 
+  .action-btn-lg {
+    height: 3rem;
+    border-radius: 0.75rem;
+    padding: 0 1.25rem;
+    font-size: 1rem;
+  }
+
   .action-btn:disabled {
     cursor: not-allowed;
     opacity: 0.45;
   }
 
   .action-btn-primary {
-    border: 1px solid #1d4ed8;
-    background: #2563eb;
+    border: 1px solid var(--color-accent-ink);
+    background: var(--color-accent);
     color: white;
-    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 8px 18px rgba(47, 91, 234, 0.2);
   }
 
   .action-btn-primary:hover:not(:disabled) {
-    background: #1d4ed8;
+    background: var(--color-accent-ink);
     transform: translateY(-1px);
   }
 
@@ -131,12 +157,6 @@
   .action-btn-quiet:hover:not(:disabled) {
     border-color: #cbd5e1;
     background: #f8fafc;
-  }
-
-  .action-btn-redact-active {
-    border: 1px solid #f59e0b;
-    background: #fffbeb;
-    color: #92400e;
   }
 
   .field-label {
@@ -160,91 +180,201 @@
   }
 
   .text-input:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(47, 91, 234, 0.12);
     outline: none;
-  }
-
-  .choice-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.4rem;
-  }
-
-  .choice-grid button {
-    min-height: 2.8rem;
-    border: 1px solid #dbe3ee;
-    border-radius: 0.7rem;
-    background: white;
-    color: #475569;
-    padding: 0.45rem 0.25rem;
-    font-size: 0.78rem;
-    font-weight: 650;
-    transition: all 150ms ease;
-  }
-
-  .choice-grid button:hover {
-    border-color: #93c5fd;
-  }
-
-  .choice-grid button.is-active {
-    border-color: #2563eb;
-    background: #eff6ff;
-    color: #1d4ed8;
-    box-shadow: inset 0 0 0 1px #2563eb;
-  }
-
-  .choice-grid small {
-    display: block;
-    margin-top: 0.05rem;
-    font-size: 0.56rem;
-    font-weight: 600;
-  }
-
-  .segmented-control {
-    display: inline-flex;
-    flex-shrink: 0;
-    border: 1px solid #dbe3ee;
-    border-radius: 0.75rem;
-    background: #f8fafc;
-    padding: 0.2rem;
-  }
-
-  .segmented-control button {
-    border-radius: 0.55rem;
-    padding: 0.4rem 0.7rem;
-    color: #64748b;
-    font-size: 0.76rem;
-    font-weight: 650;
-  }
-
-  .segmented-control button.is-active {
-    background: white;
-    color: #1e3a8a;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
-  }
-
-  .segmented-control button:disabled {
-    cursor: not-allowed;
-    opacity: 0.45;
-  }
-
-  .control-card {
-    border: 1px solid #e2e8f0;
-    border-radius: 0.8rem;
-    background: white;
-    padding: 0.78rem;
   }
 
   .range-input {
     width: 100%;
-    accent-color: #2563eb;
+    accent-color: var(--color-accent);
   }
 
-  .drop-area-active {
-    border-color: #3b82f6;
-    background: #eff6ff;
-    box-shadow: inset 0 0 0 1px #3b82f6;
+  .canvas-dots {
+    background-color: #eef0f3;
+    background-image: radial-gradient(#d3d8e0 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  .step-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.5rem;
+    border-radius: 0.6rem;
+    padding: 0 0.875rem 0 0.5rem;
+    color: var(--color-ink-2);
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease;
+  }
+
+  .step-btn:hover {
+    color: var(--color-ink);
+  }
+
+  .step-btn.is-active {
+    background: white;
+    color: var(--color-ink);
+    box-shadow:
+      0 1px 2px rgba(14, 18, 24, 0.1),
+      0 0 0 1px rgba(14, 18, 24, 0.04);
+  }
+
+  .step-badge {
+    display: grid;
+    height: 1.5rem;
+    width: 1.5rem;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--color-line);
+    color: var(--color-ink-2);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .step-btn.is-active .step-badge {
+    background: var(--color-accent);
+    color: white;
+  }
+
+  @media (width < 40rem) {
+    .step-btn {
+      padding: 0 0.5rem;
+    }
+
+    .step-badge {
+      display: none;
+    }
+  }
+
+  .toolbar-btn {
+    display: inline-flex;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.6rem;
+    padding: 0 0.75rem;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color 160ms ease;
+  }
+
+  .toolbar-btn:hover:not(:disabled),
+  .toolbar-btn.is-active {
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  .toolbar-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  .chip {
+    height: 2.5rem;
+    border: 1px solid #d5dae2;
+    border-radius: 999px;
+    background: white;
+    padding: 0 0.875rem;
+    color: var(--color-ink-2);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition:
+      border-color 150ms ease,
+      background-color 150ms ease;
+  }
+
+  .chip:hover {
+    border-color: #a9b5c4;
+  }
+
+  .chip.is-active {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-ink);
+  }
+
+  .strength-tile {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.375rem;
+    border: 1px solid var(--color-line);
+    border-radius: 0.75rem;
+    background: white;
+    padding: 0.3rem 0.3rem 0.45rem;
+    color: var(--color-ink);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition: border-color 150ms ease;
+  }
+
+  .strength-tile:hover {
+    border-color: #a9b5c4;
+  }
+
+  .strength-tile.is-active {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+    box-shadow: inset 0 0 0 1px var(--color-accent);
+  }
+
+  .strength-bar {
+    display: block;
+    flex: none;
+    background: repeating-linear-gradient(
+      90deg,
+      #353b46 0 14px,
+      transparent 14px 20px
+    );
+  }
+
+  .color-swatch {
+    height: 1.75rem;
+    width: 1.75rem;
+    border: 1px solid #c4cbd6;
+    border-radius: 999px;
+  }
+
+  .color-swatch[aria-pressed="true"] {
+    box-shadow:
+      0 0 0 2px white,
+      0 0 0 4px var(--color-accent);
+  }
+
+  .icon-btn {
+    display: grid;
+    height: 2.25rem;
+    width: 2.25rem;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 0.5rem;
+    color: var(--color-ink-3);
+  }
+
+  .icon-btn:hover {
+    background: #f0f2f5;
+    color: var(--color-ink);
+  }
+
+  .link-btn {
+    color: var(--color-accent-ink);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .link-btn:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   .notice-error {
@@ -254,46 +384,5 @@
     padding: 0.65rem 0.8rem;
     color: #9f1239;
     font-size: 0.84rem;
-  }
-
-  .close-btn {
-    display: grid;
-    height: 2.25rem;
-    width: 2.25rem;
-    flex-shrink: 0;
-    place-items: center;
-    border: 1px solid #dbe3ee;
-    border-radius: 999px;
-    background: white;
-    color: #475569;
-    font-size: 1.35rem;
-    line-height: 1;
-  }
-
-  .close-btn:hover {
-    background: #f8fafc;
-  }
-}
-
-@layer utilities {
-  @keyframes rise-in {
-    from {
-      opacity: 0;
-      transform: translateY(6px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .animate-rise-in {
-    animation: rise-in 360ms ease-out both;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .animate-rise-in {
-      animation: none;
-    }
   }
 }

@@ -104,15 +104,62 @@ export function getEffectiveWatermarkSpacing(
   };
 }
 
+export type StrengthValues = Pick<
+  WatermarkSettings,
+  "opacity" | "fontSize" | "spacingX" | "spacingY"
+>;
+
+export function composeWatermarkText(
+  purpose: string,
+  recipient: string,
+  date?: string,
+): string {
+  const text = `Only for ${purpose} at ${recipient.trim() || "[Company]"}`;
+  return date ? `${text} · ${date}` : text;
+}
+
+export function formatWatermarkDate(date: Date, locale?: string): string {
+  return date.toLocaleDateString(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export function findMatchingPreset<T extends { values: StrengthValues }>(
+  settings: WatermarkSettings,
+  presets: readonly T[],
+): T | null {
+  return (
+    presets.find(({ values }) =>
+      (Object.keys(values) as Array<keyof StrengthValues>).every(
+        (key) => settings[key] === values[key],
+      ),
+    ) ?? null
+  );
+}
+
+function slugify(text: string): string {
+  return text
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export function getDownloadFileName(
   fileName: string,
   defaultName: string,
+  recipient = "",
 ): string {
   if (!fileName) return defaultName;
   const extensionIndex = fileName.lastIndexOf(".");
   const baseName =
     extensionIndex > 0 ? fileName.slice(0, extensionIndex) : fileName;
-  return `${baseName}-kyc-watermarked.png`;
+  const recipientSlug = slugify(recipient);
+  const suffix = recipientSlug ? `for-${recipientSlug}` : "kyc-watermarked";
+  return `${baseName}-${suffix}.png`;
 }
 
 export function getImageFileValidationError(file: {

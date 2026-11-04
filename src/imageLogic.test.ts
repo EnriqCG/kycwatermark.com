@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  composeWatermarkText,
   edgeCursor,
   findEdgeZone,
+  findMatchingPreset,
+  formatWatermarkDate,
   getDownloadFileName,
   getEffectiveWatermarkSpacing,
   getImageFileValidationError,
@@ -147,6 +150,18 @@ describe("file behavior", () => {
       "watermarked-id.png",
     );
   });
+
+  for (const [recipient, expected] of [
+    ["Acme Bank", "passport-for-acme-bank.png"],
+    ["  Société Générale! ", "passport-for-societe-generale.png"],
+    ["!!!", "passport-kyc-watermarked.png"],
+  ] as const) {
+    it(`adds the recipient "${recipient}" to the download name`, () => {
+      expect(
+        getDownloadFileName("passport.jpg", "watermarked-id.png", recipient),
+      ).toBe(expected);
+    });
+  }
 
   it("accepts image MIME types at exactly the size limit", () => {
     expect(
@@ -296,5 +311,50 @@ describe("redaction resizing", () => {
     expect(result.x + result.w / 2).toBeCloseTo(60);
     expect(result.y + result.h / 2).toBeCloseTo(50);
     expect(result.angle).toBe(Math.PI / 2);
+  });
+});
+
+describe("watermark text and strength", () => {
+  it("composes the watermark from purpose, recipient, and date", () => {
+    expect(
+      composeWatermarkText(
+        "identity verification",
+        " Acme Bank ",
+        "3 Nov 2026",
+      ),
+    ).toBe("Only for identity verification at Acme Bank · 3 Nov 2026");
+  });
+
+  it("uses a placeholder recipient and omits a missing date", () => {
+    expect(composeWatermarkText("account opening", "   ")).toBe(
+      "Only for account opening at [Company]",
+    );
+  });
+
+  it("formats the watermark date as day, short month, and year", () => {
+    expect(formatWatermarkDate(new Date(2026, 10, 3), "en-GB")).toBe(
+      "3 Nov 2026",
+    );
+  });
+
+  const presets = [
+    {
+      id: "subtle",
+      values: { opacity: 0.22, fontSize: 30, spacingX: 560, spacingY: 220 },
+    },
+    {
+      id: "balanced",
+      values: { opacity: 0.4, fontSize: 34, spacingX: 520, spacingY: 180 },
+    },
+  ];
+
+  it("finds the preset whose values all match the settings", () => {
+    expect(findMatchingPreset(settings, presets)?.id).toBe("balanced");
+  });
+
+  it("returns null once any preset value is changed", () => {
+    expect(
+      findMatchingPreset({ ...settings, fontSize: 35 }, presets),
+    ).toBeNull();
   });
 });

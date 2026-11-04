@@ -1,6 +1,6 @@
 import type { IconProps } from "../types/icon";
 
-export default function ExternalLinkIcon({ className }: IconProps) {
+export default function ChevronDownIcon({ className }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -13,10 +13,8 @@ export default function ExternalLinkIcon({ className }: IconProps) {
       aria-hidden="true"
       focusable="false"
     >
-      <title>External link icon</title>
-      <path d="M14 5h5v5" />
-      <path d="m10 14 9-9" />
-      <path d="M19 14v5H5V5h5" />
+      <title>Chevron icon</title>
+      <path d="M6 9l6 6 6-6" />
     </svg>
   );
 }
