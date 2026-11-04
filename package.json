@@ -1,7 +1,7 @@
 {
-  "name": "kycer",
+  "name": "kycwatermark.com",
   "version": "1.0.0",
-  "description": "Offline KYC watermark tool",
+  "description": "Watermark your ID before you hand it over.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,8 @@
   "author": "",
   "packageManager": "pnpm@10.30.1",
   "dependencies": {
+    "@fontsource-variable/geist": "5.2.8",
+    "@fontsource-variable/geist-mono": "5.2.7",
     "@tailwindcss/vite": "4.2.4",
     "react": "19.2.5",
     "react-dom": "19.2.5",

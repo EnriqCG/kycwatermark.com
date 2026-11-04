@@ -1,6 +1,6 @@
 import type { IconProps } from "../types/icon";
 
-export default function ExternalLinkIcon({ className }: IconProps) {
+export default function ArrowRightIcon({ className }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -13,10 +13,9 @@ export default function ExternalLinkIcon({ className }: IconProps) {
       aria-hidden="true"
       focusable="false"
     >
-      <title>External link icon</title>
-      <path d="M14 5h5v5" />
-      <path d="m10 14 9-9" />
-      <path d="M19 14v5H5V5h5" />
+      <title>Arrow right icon</title>
+      <path d="M5 12h14" />
+      <path d="M13 6l6 6-6 6" />
     </svg>
   );
 }

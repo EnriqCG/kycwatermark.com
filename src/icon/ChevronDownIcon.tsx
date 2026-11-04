@@ -1,20 +1,20 @@
 import type { IconProps } from "../types/icon";
 
-export default function TypeIcon({ className }: IconProps) {
+export default function ChevronDownIcon({ className }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
       aria-hidden="true"
       focusable="false"
     >
-      <title>Text controls icon</title>
-      <path d="M4 7V4h16v3" />
-      <path d="M9 20h6" />
-      <path d="M12 4v16" />
+      <title>Chevron icon</title>
+      <path d="M6 9l6 6 6-6" />
     </svg>
   );
 }

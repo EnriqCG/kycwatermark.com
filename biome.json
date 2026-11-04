@@ -16,5 +16,10 @@
   "formatter": {
     "enabled": true,
     "indentStyle": "space"
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   }
 }
