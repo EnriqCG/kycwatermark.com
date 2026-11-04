@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  addWatermarkDate,
   composeWatermarkText,
   edgeCursor,
   findEdgeZone,
@@ -315,21 +316,27 @@ describe("redaction resizing", () => {
 });
 
 describe("watermark text and strength", () => {
-  it("composes the watermark from purpose, recipient, and date", () => {
-    expect(
-      composeWatermarkText(
-        "identity verification",
-        " Acme Bank ",
-        "3 Nov 2026",
-      ),
-    ).toBe("Only for identity verification at Acme Bank · 3 Nov 2026");
+  it("composes the watermark from purpose and recipient", () => {
+    expect(composeWatermarkText("identity verification", " Acme Bank ")).toBe(
+      "Only for identity verification at Acme Bank",
+    );
   });
 
-  it("uses a placeholder recipient and omits a missing date", () => {
+  it("uses a placeholder when the recipient is empty", () => {
     expect(composeWatermarkText("account opening", "   ")).toBe(
       "Only for account opening at [Company]",
     );
   });
+
+  for (const [text, date, expected] of [
+    ["Only for Acme Bank ", "3 Nov 2026", "Only for Acme Bank · 3 Nov 2026"],
+    ["Only for Acme Bank", undefined, "Only for Acme Bank"],
+    ["   ", "3 Nov 2026", "3 Nov 2026"],
+  ] as const) {
+    it(`adds the date ${String(date)} to "${text}"`, () => {
+      expect(addWatermarkDate(text, date)).toBe(expected);
+    });
+  }
 
   it("formats the watermark date as day, short month, and year", () => {
     expect(formatWatermarkDate(new Date(2026, 10, 3), "en-GB")).toBe(

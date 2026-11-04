@@ -112,10 +112,13 @@ export type StrengthValues = Pick<
 export function composeWatermarkText(
   purpose: string,
   recipient: string,
-  date?: string,
 ): string {
-  const text = `Only for ${purpose} at ${recipient.trim() || "[Company]"}`;
-  return date ? `${text} · ${date}` : text;
+  return `Only for ${purpose} at ${recipient.trim() || "[Company]"}`;
+}
+
+/** The date is its own option, added after either suggested or custom text. */
+export function addWatermarkDate(text: string, date?: string): string {
+  return [text.trim(), date ?? ""].filter(Boolean).join(" · ");
 }
 
 export function formatWatermarkDate(date: Date, locale?: string): string {

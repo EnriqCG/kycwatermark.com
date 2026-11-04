@@ -12,12 +12,15 @@ import {
   useState,
 } from "react";
 import cx from "./cx";
-import BrandIcon from "./icon/BrandIcon";
+import ArrowRightIcon from "./icon/ArrowRightIcon";
+import CalendarIcon from "./icon/CalendarIcon";
 import CameraIcon from "./icon/CameraIcon";
 import CheckIcon from "./icon/CheckIcon";
 import ChevronDownIcon from "./icon/ChevronDownIcon";
+import CloseIcon from "./icon/CloseIcon";
 import CodeIcon from "./icon/CodeIcon";
 import CompareIcon from "./icon/CompareIcon";
+import CopyIcon from "./icon/CopyIcon";
 import DeviceIcon from "./icon/DeviceIcon";
 import DownloadIcon from "./icon/DownloadIcon";
 import GitHubIcon from "./icon/GithubIcon";
@@ -29,6 +32,7 @@ import TrashIcon from "./icon/TrashIcon";
 import UndoIcon from "./icon/UndoIcon";
 import UploadIcon from "./icon/UploadIcon";
 import {
+  addWatermarkDate,
   composeWatermarkText,
   type EdgeZone,
   edgeCursor,
@@ -80,8 +84,9 @@ type PreviewMode = "original" | "watermarked";
 type InteractionMode = "idle" | "drawing" | "moving" | "rotating" | "resizing";
 type HitZone = "handle" | "delete" | EdgeZone | "body";
 
-type Step = "hide" | "mark" | "export";
+type Step = "hide" | "mark";
 type TextMode = "suggested" | "custom";
+type CopyStatus = "idle" | "copying" | "copied";
 
 type Purpose = {
   id: string;
@@ -92,7 +97,6 @@ type Purpose = {
 type StrengthPreset = {
   id: string;
   label: string;
-  note: string;
   values: StrengthValues;
 };
 
@@ -121,7 +125,6 @@ const watermarkPreset: Preset = {
 const steps: ReadonlyArray<{ id: Step; label: string }> = [
   { id: "hide", label: "Hide details" },
   { id: "mark", label: "Watermark" },
-  { id: "export", label: "Export" },
 ];
 
 const purposes: readonly Purpose[] = [
@@ -140,25 +143,21 @@ const strengthPresets: readonly StrengthPreset[] = [
   {
     id: "subtle",
     label: "Subtle",
-    note: "Subtle keeps every detail easy to read.",
     values: { opacity: 0.22, fontSize: 30, spacingX: 560, spacingY: 220 },
   },
   {
     id: "balanced",
     label: "Balanced",
-    note: "Balanced is recommended: readable, and hard to crop out.",
     values: { opacity: 0.4, fontSize: 34, spacingX: 520, spacingY: 180 },
   },
   {
     id: "bold",
     label: "Bold",
-    note: "Bold is very hard to remove but can cover small print.",
     values: { opacity: 0.55, fontSize: 44, spacingX: 560, spacingY: 190 },
   },
   {
     id: "dense",
     label: "Dense",
-    note: "Dense leaves no clean area to crop.",
     values: { opacity: 0.32, fontSize: 26, spacingX: 360, spacingY: 120 },
   },
 ];
@@ -174,6 +173,11 @@ const previewRows = [0, 1, 2, 3, 4, 5, 6] as const;
 
 const repositoryUrl = "https://github.com/EnriqCG/kycwatermark.com";
 
+// Copying an image needs the async Clipboard API with ClipboardItem.
+const canCopyImage =
+  typeof ClipboardItem !== "undefined" &&
+  typeof navigator.clipboard?.write === "function";
+
 function getWatermarkFont(fontSize: number) {
   return `600 ${fontSize}px "Avenir Next", "Sora", "Manrope", "Trebuchet MS", "Segoe UI", sans-serif`;
 }
@@ -187,13 +191,24 @@ type DropHandlers = Pick<
   "onDragEnter" | "onDragOver" | "onDragLeave" | "onDrop"
 >;
 
+type Draft = {
+  fileName: string;
+  step: Step;
+  redactionCount: number;
+  watermarkText: string;
+  draw: (canvas: HTMLCanvasElement, showSelectionUI: boolean) => void;
+};
+
 type LandingPageProps = {
+  draft: Draft | null;
   isDragActive: boolean;
   error: string | null;
   dropHandlers: DropHandlers;
   onChooseFile: () => void;
   onTakePhoto: () => void;
   onTrySample: () => void;
+  onContinue: () => void;
+  onDiscard: () => void;
 };
 
 const privacyPoints: ReadonlyArray<{
@@ -287,18 +302,33 @@ const faqs: ReadonlyArray<{ question: string; answer: ReactNode }> = [
 ];
 
 function LandingPage({
+  draft,
   isDragActive,
   error,
   dropHandlers,
   onChooseFile,
   onTakePhoto,
   onTrySample,
+  onContinue,
+  onDiscard,
 }: LandingPageProps) {
+  const startRef = useRef<HTMLElement | null>(null);
+  const hasDraft = draft !== null;
+
+  // Coming back from the editor: bring the document in progress into view.
+  useEffect(() => {
+    if (hasDraft) {
+      startRef.current?.scrollIntoView({
+        block: "nearest",
+        behavior: "instant",
+      });
+    }
+  }, [hasDraft]);
+
   const sampleText = useMemo(
     () =>
-      composeWatermarkText(
-        purposes[0].phrase,
-        "Acme Bank",
+      addWatermarkDate(
+        composeWatermarkText(purposes[0].phrase, "Acme Bank"),
         formatWatermarkDate(new Date()),
       ),
     [],
@@ -307,11 +337,11 @@ function LandingPage({
   return (
     <div id="top" className="min-h-screen bg-ground text-ink">
       <header className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-4 sm:px-6">
-        <a href="#top" className="flex shrink-0 items-center gap-2.5 text-ink">
-          <span className="grid h-8 w-8 place-items-center rounded-[9px] bg-ink text-white">
-            <BrandIcon className="h-[18px] w-[18px]" />
-          </span>
-          <span className="font-semibold tracking-tight">KYC Watermark</span>
+        <a
+          href="#top"
+          className="shrink-0 font-semibold tracking-tight text-ink"
+        >
+          KYCWatermark.com
         </a>
         <nav aria-label="Main" className="flex items-center gap-1">
           <a href="#how" className="nav-link max-sm:hidden">
@@ -334,9 +364,9 @@ function LandingPage({
 
       <main>
         <section className="mx-auto flex max-w-[1200px] flex-col items-center px-4 pt-10 text-center sm:px-6 sm:pt-14">
-          <p className="inline-flex items-center gap-2 rounded-full bg-success-soft py-1.5 pl-2.5 pr-3 text-sm font-medium text-success">
+          <p className="inline-flex items-center gap-2 rounded-full bg-success-soft py-1.5 pl-2.5 pr-3 text-[13px] font-medium text-success sm:text-sm">
             <DeviceIcon className="h-4 w-4" />
-            Runs in your browser · nothing is uploaded
+            Runs in your browser. No data is sent anywhere.
           </p>
           <h1 className="mt-5 max-w-[860px] text-balance text-[40px] font-semibold leading-[1.06] tracking-[-0.035em] sm:text-6xl sm:leading-[1.04]">
             Watermark your ID before you hand it over.
@@ -348,6 +378,7 @@ function LandingPage({
         </section>
 
         <section
+          ref={startRef}
           aria-label="Start"
           className="mx-auto mt-10 max-w-[1200px] px-4 sm:mt-12 sm:px-6"
           {...dropHandlers}
@@ -361,41 +392,55 @@ function LandingPage({
                   : "border-[#c4cbd6] bg-[#fafbfc]",
               )}
             >
-              <span className="grid h-16 w-16 place-items-center rounded-[18px] bg-accent-soft text-accent">
-                <UploadIcon className="h-7 w-7" />
-              </span>
-              <div>
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  {isDragActive ? "Drop to open it" : "Drop your document here"}
-                </h2>
-                <p className="mt-2 text-[15px] text-ink-3">
-                  PNG, JPG, WebP or HEIC · up to 20 MB
-                </p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2.5">
-                <button
-                  type="button"
-                  className="action-btn action-btn-primary action-btn-lg"
-                  onClick={onChooseFile}
-                >
-                  Choose a file
-                </button>
-                <button
-                  type="button"
-                  className="action-btn action-btn-quiet action-btn-lg hidden pointer-coarse:inline-flex"
-                  onClick={onTakePhoto}
-                >
-                  <CameraIcon className="h-[18px] w-[18px]" />
-                  Take a photo
-                </button>
-              </div>
-              <button
-                type="button"
-                className="link-btn text-[15px] font-medium"
-                onClick={onTrySample}
-              >
-                No document handy? Try it with a sample ID →
-              </button>
+              {draft && !isDragActive ? (
+                <DraftSummary
+                  draft={draft}
+                  onContinue={onContinue}
+                  onChooseFile={onChooseFile}
+                  onTakePhoto={onTakePhoto}
+                  onDiscard={onDiscard}
+                />
+              ) : (
+                <>
+                  <span className="grid h-16 w-16 place-items-center rounded-[18px] bg-accent-soft text-accent">
+                    <UploadIcon className="h-7 w-7" />
+                  </span>
+                  <div>
+                    <h2 className="text-2xl font-semibold tracking-tight">
+                      {isDragActive
+                        ? "Drop to open it"
+                        : "Drop your document here"}
+                    </h2>
+                    <p className="mt-2 text-[15px] text-ink-3">
+                      PNG, JPG, WebP or HEIC · up to 20 MB
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2.5">
+                    <button
+                      type="button"
+                      className="action-btn action-btn-primary action-btn-lg"
+                      onClick={onChooseFile}
+                    >
+                      Choose a file
+                    </button>
+                    <button
+                      type="button"
+                      className="action-btn action-btn-quiet action-btn-lg hidden pointer-coarse:inline-flex"
+                      onClick={onTakePhoto}
+                    >
+                      <CameraIcon className="h-[18px] w-[18px]" />
+                      Take a photo
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="link-btn text-[15px] font-medium"
+                    onClick={onTrySample}
+                  >
+                    No document handy? Try it with a sample ID →
+                  </button>
+                </>
+              )}
               {error && (
                 <p className="notice-error" role="alert">
                   {error}
@@ -409,12 +454,22 @@ function LandingPage({
                   What the company receives
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-1 text-[13px] font-medium">
-                  <span className="h-[7px] w-2.5 rounded-[2px] bg-[#0b0d10]" />3
-                  details hidden
+                  <span className="h-[7px] w-2.5 rounded-[2px] bg-[#0b0d10]" />
+                  {draft
+                    ? describeHidden(draft.redactionCount)
+                    : describeHidden(3)}
                 </span>
               </div>
-              <SamplePreview text={sampleText} />
-              <p className="font-mono text-[13px] text-ink-2">“{sampleText}”</p>
+              {draft ? (
+                <DraftPreview draw={draft.draw} />
+              ) : (
+                <SamplePreview text={sampleText} />
+              )}
+              <p className="font-mono text-[13px] text-ink-2">
+                {draft && !draft.watermarkText.trim()
+                  ? "No watermark text yet"
+                  : `“${draft ? draft.watermarkText : sampleText}”`}
+              </p>
             </div>
           </div>
         </section>
@@ -450,7 +505,6 @@ function LandingPage({
           </div>
           <ol className="grid gap-4 md:grid-cols-3">
             <HowStep
-              number="01"
               title="Add your document"
               body="Drop a scan or photo of your ID, or take a picture with your phone's camera."
             >
@@ -462,7 +516,6 @@ function LandingPage({
               </div>
             </HowStep>
             <HowStep
-              number="02"
               title="Hide what they don't need"
               body="Drag boxes over your document number, address or anything the company hasn't asked for."
             >
@@ -475,9 +528,8 @@ function LandingPage({
               </MiniCard>
             </HowStep>
             <HowStep
-              number="03"
               title="Stamp it and send"
-              body="Say who it's for and why. Today's date is added for you, then download the protected copy."
+              body="Say who it's for and why. Today's date is added for you, then download it or copy it."
             >
               <MiniCard watermark>
                 <span className="h-1.5 w-4/5 rounded-full bg-[#a9b5c4]" />
@@ -494,12 +546,11 @@ function LandingPage({
           className="mx-auto mt-24 flex max-w-[1200px] scroll-mt-6 flex-wrap gap-x-12 gap-y-8 px-4 sm:mt-[120px] sm:px-6"
         >
           <div className="flex flex-[1_1_280px] flex-col gap-3">
-            <p className="section-label">FAQ</p>
             <h2
               id="faq-title"
               className="text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] sm:text-[40px]"
             >
-              Questions, answered
+              FAQ
             </h2>
             <p className="text-ink-2">
               Still unsure? Read the code or open an issue on{" "}
@@ -539,13 +590,12 @@ function LandingPage({
 }
 
 type HowStepProps = {
-  number: string;
   title: string;
   body: string;
   children: ReactNode;
 };
 
-function HowStep({ number, title, body, children }: HowStepProps) {
+function HowStep({ title, body, children }: HowStepProps) {
   return (
     <li className="flex flex-col gap-4 rounded-[20px] border border-line bg-white px-4 pb-6 pt-4">
       <div
@@ -555,11 +605,115 @@ function HowStep({ number, title, body, children }: HowStepProps) {
         {children}
       </div>
       <div className="flex flex-col gap-1.5 px-2">
-        <span className="font-mono text-[13px] text-ink-3">{number}</span>
         <h3 className="text-[19px] font-semibold">{title}</h3>
         <p className="text-[15px] text-ink-2">{body}</p>
       </div>
     </li>
+  );
+}
+
+function describeHidden(count: number) {
+  if (count === 0) return "Nothing hidden";
+  return `${count} ${count === 1 ? "detail" : "details"} hidden`;
+}
+
+type DraftSummaryProps = {
+  draft: Draft;
+  onContinue: () => void;
+  onChooseFile: () => void;
+  onTakePhoto: () => void;
+  onDiscard: () => void;
+};
+
+function DraftSummary({
+  draft,
+  onContinue,
+  onChooseFile,
+  onTakePhoto,
+  onDiscard,
+}: DraftSummaryProps) {
+  const stepIndex = steps.findIndex(({ id }) => id === draft.step);
+
+  return (
+    <>
+      <span className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1 text-[13px] font-medium text-accent-ink">
+        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-accent" />
+        In progress
+      </span>
+      <div className="w-full max-w-sm">
+        <h2 className="text-2xl font-semibold tracking-tight">
+          Continue where you left off
+        </h2>
+        <p
+          className="mt-2 truncate text-[15px] font-medium text-ink"
+          title={draft.fileName}
+        >
+          {draft.fileName}
+        </p>
+        <p className="mt-0.5 text-sm text-ink-3">
+          Step {stepIndex + 1} of {steps.length}: {steps[stepIndex].label} ·{" "}
+          {describeHidden(draft.redactionCount)}
+        </p>
+      </div>
+      <div className="flex flex-wrap justify-center gap-2.5">
+        <button
+          type="button"
+          className="action-btn action-btn-primary action-btn-lg"
+          onClick={onContinue}
+        >
+          Continue editing
+          <ArrowRightIcon className="h-[18px] w-[18px]" />
+        </button>
+        <button
+          type="button"
+          className="action-btn action-btn-quiet action-btn-lg"
+          onClick={onChooseFile}
+        >
+          Choose a new file
+        </button>
+        <button
+          type="button"
+          className="action-btn action-btn-quiet action-btn-lg hidden pointer-coarse:inline-flex"
+          onClick={onTakePhoto}
+        >
+          <CameraIcon className="h-[18px] w-[18px]" />
+          Take a photo
+        </button>
+      </div>
+      <p className="max-w-xs text-sm text-ink-3">
+        Choosing or dropping a new file replaces the one in progress.
+      </p>
+      <button
+        type="button"
+        className="link-btn font-medium text-ink-3"
+        onClick={onDiscard}
+      >
+        Discard this document
+      </button>
+    </>
+  );
+}
+
+type DraftPreviewProps = {
+  draw: Draft["draw"];
+};
+
+function DraftPreview({ draw }: DraftPreviewProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    if (canvasRef.current) draw(canvasRef.current, false);
+  }, [draw]);
+
+  return (
+    <div className="flex justify-center">
+      <canvas
+        ref={canvasRef}
+        role="img"
+        aria-label="Your document as it will be downloaded"
+        className="block h-auto max-h-[420px] w-auto min-w-0 max-w-full rounded-[10px] bg-white shadow-[0_30px_60px_-24px_rgba(14,18,24,0.30),0_2px_6px_rgba(14,18,24,0.08)]"
+      />
+    </div>
   );
 }
 
@@ -675,10 +829,13 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     ...preset.initialSettings,
   });
   const [textMode, setTextMode] = useState<TextMode>("suggested");
+  const [customText, setCustomText] = useState<string | null>(null);
   const [recipient, setRecipient] = useState("");
   const [purposeId, setPurposeId] = useState(purposes[0].id);
   const [includeDate, setIncludeDate] = useState(true);
   const [step, setStep] = useState<Step>("hide");
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
   const [fileName, setFileName] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
@@ -694,7 +851,9 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     () => window.matchMedia("(pointer: coarse)").matches,
   );
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(
+    null,
+  );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepth = useRef(0);
@@ -708,12 +867,17 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
   const watermarkDate = useMemo(() => formatWatermarkDate(new Date()), []);
   const purpose = purposes.find(({ id }) => id === purposeId) ?? purposes[0];
-  const suggestedText = composeWatermarkText(
-    purpose.phrase,
-    recipient,
+  const suggestedText = composeWatermarkText(purpose.phrase, recipient);
+  const watermarkText = addWatermarkDate(
+    textMode === "custom" ? (customText ?? suggestedText) : suggestedText,
     includeDate ? watermarkDate : undefined,
   );
-  const watermarkText = textMode === "custom" ? settings.text : suggestedText;
+
+  // Custom text starts from the suggestion the first time, then keeps edits.
+  const changeTextMode = (mode: TextMode) => {
+    if (mode === "custom" && customText === null) setCustomText(suggestedText);
+    setTextMode(mode);
+  };
   const activeStrength = findMatchingPreset(settings, strengthPresets);
 
   const scaleFactor = useMemo(() => {
@@ -794,7 +958,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   }, [fileName, preset.downloadName, recipient]);
 
   const getCanvasPoint = (e: { clientX: number; clientY: number }) => {
-    const canvas = canvasRef.current;
+    const canvas = canvasElement;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     return screenToCanvas({ x: e.clientX, y: e.clientY }, canvas, {
@@ -882,7 +1046,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   };
 
   const handleCanvasPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
+    const canvas = canvasElement;
     if (!canvas || !canRedact || !loadedImage || !e.isPrimary) return;
 
     const pos = getCanvasPoint(e);
@@ -996,7 +1160,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   };
 
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvas = canvasElement;
     if (!canvas || !loadedImage) return;
     const observer = new ResizeObserver(([entry]) => {
       const width = entry.contentRect.width;
@@ -1004,21 +1168,44 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     });
     observer.observe(canvas);
     return () => observer.disconnect();
-  }, [loadedImage]);
+  }, [canvasElement, loadedImage]);
 
   useEffect(() => {
-    if (step !== "hide") {
+    if (step !== "hide" || !isEditorOpen) {
       interactionMode.current = "idle";
       setActiveRect(null);
       setSelectedIndex(null);
     }
-  }, [step]);
+    if (!isEditorOpen) setPreviewMode("watermarked");
+  }, [step, isEditorOpen]);
+
+  // The editor gets its own history entry, so Back closes it instead of
+  // leaving the site and losing the work in progress.
+  useEffect(() => {
+    // The page sets its own scroll position when switching views.
+    window.history.scrollRestoration = "manual";
+    // A reload keeps the editor's history entry, but not the document in it.
+    if (window.history.state?.editor === true) {
+      window.history.replaceState(null, "");
+    }
+    const handlePopState = (event: PopStateEvent) => {
+      setIsEditorOpen(event.state?.editor === true);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const showEditor = isEditorOpen && loadedImage !== null;
 
   useEffect(() => {
-    const canvas = canvasRef.current;
+    if (showEditor) window.scrollTo({ top: 0, behavior: "instant" });
+  }, [showEditor]);
+
+  useEffect(() => {
+    const canvas = canvasElement;
     if (!canvas) return;
     canvas.style.cursor = loadedImage && canRedact ? "crosshair" : "default";
-  }, [loadedImage, canRedact]);
+  }, [canvasElement, loadedImage, canRedact]);
 
   useEffect(() => {
     return () => {
@@ -1049,11 +1236,10 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     };
   }, [imageUrl]);
 
-  const drawCanvas = useCallback(
-    (showSelectionUI: boolean) => {
+  // Draws into the editor canvas, or into the landing page's draft preview.
+  const drawDocument = useCallback(
+    (canvas: HTMLCanvasElement, showSelectionUI: boolean) => {
       if (!loadedImage) return;
-      const canvas = canvasRef.current;
-      if (!canvas) return;
       const context = canvas.getContext("2d");
       if (!context) return;
 
@@ -1176,8 +1362,8 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   );
 
   useEffect(() => {
-    drawCanvas(true);
-  }, [drawCanvas]);
+    if (canvasElement) drawDocument(canvasElement, true);
+  }, [canvasElement, drawDocument]);
 
   const updateSetting = <K extends keyof WatermarkSettings>(
     key: K,
@@ -1209,6 +1395,28 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     setPreviewMode("watermarked");
     setStep("hide");
     setNotice({ tone: "info", message: `Loaded ${file.name}` });
+    openEditor();
+  };
+
+  const openEditor = () => {
+    if (!isEditorOpen) window.history.pushState({ editor: true }, "");
+    setIsEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    if (window.history.state?.editor === true) {
+      window.history.back();
+    } else {
+      setIsEditorOpen(false);
+    }
+  };
+
+  const discardDocument = () => {
+    setImageUrl("");
+    setFileName("");
+    setRedactions([]);
+    setStep("hide");
+    setNotice(null);
   };
 
   const openFilePicker = () => {
@@ -1301,32 +1509,71 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
 
+  const renderExportBlob = () =>
+    new Promise<Blob>((resolve, reject) => {
+      const canvas = canvasElement;
+      if (!canvas || !loadedImage) {
+        reject(new Error("No document is open."));
+        return;
+      }
+
+      drawDocument(canvas, false);
+      canvas.toBlob((blob) => {
+        drawDocument(canvas, true);
+        if (blob) resolve(blob);
+        else reject(new Error("Could not export the image."));
+      }, "image/png");
+    });
+
   const handleDownload = () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !loadedImage) return;
-
-    drawCanvas(false);
-
-    canvas.toBlob(
+    renderExportBlob().then(
       (blob) => {
-        drawCanvas(true);
-        if (!blob) return;
-
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement("a");
         anchor.href = url;
         anchor.download = downloadFileName;
         anchor.click();
         URL.revokeObjectURL(url);
+        setNotice(null);
       },
-      "image/png",
-      0.94,
+      () =>
+        setNotice({
+          tone: "error",
+          message: "Could not export the image. Try again.",
+        }),
     );
   };
 
+  const handleCopy = () => {
+    setCopyStatus("copying");
+    // Safari only allows the write if it starts inside the click, so the
+    // image goes in as a promise instead of being rendered first.
+    navigator.clipboard
+      .write([new ClipboardItem({ "image/png": renderExportBlob() })])
+      .then(
+        () => {
+          setCopyStatus("copied");
+          setNotice(null);
+        },
+        () => {
+          setCopyStatus("idle");
+          setNotice({
+            tone: "error",
+            message:
+              "Your browser didn't allow copying the image. Use Download instead.",
+          });
+        },
+      );
+  };
+
+  useEffect(() => {
+    if (copyStatus !== "copied") return;
+    const timer = window.setTimeout(() => setCopyStatus("idle"), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copyStatus]);
+
   const restoreRecommended = () => {
     setSettings({ ...preset.initialSettings });
-    setTextMode("suggested");
     setNotice({ tone: "info", message: "Settings reset to default values." });
   };
 
@@ -1362,7 +1609,17 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     onDrop: handleDropAreaDrop,
   };
 
-  if (!loadedImage) {
+  if (!loadedImage || !isEditorOpen) {
+    const draft: Draft | null = loadedImage
+      ? {
+          fileName,
+          step,
+          redactionCount: redactions.length,
+          watermarkText,
+          draw: drawDocument,
+        }
+      : null;
+
     return (
       <>
         {fileInput}
@@ -1376,12 +1633,15 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
           className="hidden"
         />
         <LandingPage
+          draft={draft}
           isDragActive={isDragActive}
           error={notice?.tone === "error" ? notice.message : null}
           dropHandlers={dropHandlers}
           onChooseFile={openFilePicker}
           onTakePhoto={() => cameraInputRef.current?.click()}
           onTrySample={openSampleDocument}
+          onContinue={openEditor}
+          onDiscard={discardDocument}
         />
       </>
     );
@@ -1399,19 +1659,23 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
       {fileInput}
 
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-line bg-white px-4 py-2.5">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[9px] bg-ink text-white">
-          <BrandIcon className="h-[18px] w-[18px]" />
-        </span>
+        <button
+          type="button"
+          className="icon-btn border border-line"
+          aria-label="Close editor"
+          title="Close and go back to the start page"
+          onClick={closeEditor}
+        >
+          <CloseIcon className="h-5 w-5" />
+        </button>
         <div className="min-w-0 flex-1 basis-40">
           <p className="truncate text-sm font-semibold">{fileName}</p>
-          <p className="font-mono text-xs text-ink-3">
-            {imageStats} · stays on this device
-          </p>
+          <p className="font-mono text-xs text-ink-3">{imageStats}</p>
         </div>
 
         <nav
           aria-label="Steps"
-          className="order-last grid w-full grid-cols-3 gap-1 rounded-xl bg-[#f0f2f5] p-1 md:order-none md:flex md:w-auto"
+          className="order-last grid w-full grid-cols-2 gap-1 rounded-xl bg-[#f0f2f5] p-1 md:order-none md:flex md:w-auto"
         >
           {steps.map((item, index) => (
             <button
@@ -1462,7 +1726,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
           </p>
 
           <canvas
-            ref={canvasRef}
+            ref={setCanvasElement}
             className={cx(
               "block h-auto max-h-[60vh] w-auto min-w-0 max-w-full rounded-[10px] bg-white shadow-[0_30px_60px_-20px_rgba(14,18,24,0.28),0_2px_6px_rgba(14,18,24,0.08)] lg:max-h-[calc(100vh-14rem)]",
               canRedact && "touch-none select-none",
@@ -1554,13 +1818,12 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
               onPurposeChange={setPurposeId}
               includeDate={includeDate}
               onIncludeDateChange={setIncludeDate}
+              dateLabel={watermarkDate}
               textMode={textMode}
+              onTextModeChange={changeTextMode}
               suggestedText={suggestedText}
-              onEditText={() => {
-                updateSetting("text", suggestedText);
-                setTextMode("custom");
-              }}
-              onUseSuggested={() => setTextMode("suggested")}
+              customText={customText ?? suggestedText}
+              onCustomTextChange={setCustomText}
               activeStrength={activeStrength}
               onStrengthChange={(strength) =>
                 setSettings((current) => ({ ...current, ...strength.values }))
@@ -1569,19 +1832,11 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
               effectiveSpacingX={effectiveSpacingX}
               effectiveSpacingY={effectiveSpacingY}
               onRestore={restoreRecommended}
-              onBack={() => setStep("hide")}
-              onNext={() => setStep("export")}
-            />
-          )}
-
-          {step === "export" && (
-            <ExportPanel
-              redactionCount={redactions.length}
-              watermarkText={watermarkText}
               needsRecipient={textMode === "suggested" && !recipient.trim()}
-              fileName={downloadFileName}
+              copyStatus={copyStatus}
+              onBack={() => setStep("hide")}
               onDownload={handleDownload}
-              onGoTo={setStep}
+              onCopy={handleCopy}
             />
           )}
         </aside>
@@ -1593,17 +1848,21 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 type StepHeadingProps = {
   step: number;
   title: string;
-  description: string;
+  description?: string;
 };
 
 function StepHeading({ step, title, description }: StepHeadingProps) {
   return (
     <div>
-      <p className="section-label">Step {step} of 3</p>
+      <p className="section-label">
+        Step {step} of {steps.length}
+      </p>
       <h2 className="mt-1 text-[22px] font-semibold tracking-tight text-ink">
         {title}
       </h2>
-      <p className="mt-1.5 text-sm text-ink-3">{description}</p>
+      {description && (
+        <p className="mt-1.5 text-sm text-ink-3">{description}</p>
+      )}
     </div>
   );
 }
@@ -1741,18 +2000,23 @@ type WatermarkPanelProps = {
   onPurposeChange: (purposeId: string) => void;
   includeDate: boolean;
   onIncludeDateChange: (includeDate: boolean) => void;
+  dateLabel: string;
   textMode: TextMode;
+  onTextModeChange: (mode: TextMode) => void;
   suggestedText: string;
-  onEditText: () => void;
-  onUseSuggested: () => void;
+  customText: string;
+  onCustomTextChange: (text: string) => void;
   activeStrength: StrengthPreset | null;
   onStrengthChange: (strength: StrengthPreset) => void;
   lineCount: number;
   effectiveSpacingX: number;
   effectiveSpacingY: number;
   onRestore: () => void;
+  needsRecipient: boolean;
+  copyStatus: CopyStatus;
   onBack: () => void;
-  onNext: () => void;
+  onDownload: () => void;
+  onCopy: () => void;
 };
 
 function WatermarkPanel({
@@ -1764,103 +2028,129 @@ function WatermarkPanel({
   onPurposeChange,
   includeDate,
   onIncludeDateChange,
+  dateLabel,
   textMode,
+  onTextModeChange,
   suggestedText,
-  onEditText,
-  onUseSuggested,
+  customText,
+  onCustomTextChange,
   activeStrength,
   onStrengthChange,
   lineCount,
   effectiveSpacingX,
   effectiveSpacingY,
   onRestore,
+  needsRecipient,
+  copyStatus,
   onBack,
-  onNext,
+  onDownload,
+  onCopy,
 }: WatermarkPanelProps) {
   return (
     <div className="flex flex-1 flex-col gap-5">
-      <StepHeading
-        step={2}
-        title="Who is this for?"
-        description="We'll write the watermark for you. Naming who it's for and when makes a leaked copy easy to trace."
-      />
+      <StepHeading step={2} title="Add a watermark" />
 
-      <label className="block">
-        <span className="field-label">Company or person</span>
-        <input
-          type="text"
-          name="wm-recipient"
-          value={recipient}
-          onChange={(event) => onRecipientChange(event.target.value)}
-          placeholder="e.g. Acme Bank"
-          autoComplete="off"
-          className="text-input mt-2"
-        />
-      </label>
-
-      <fieldset>
-        <legend className="field-label">Purpose</legend>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {purposes.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={cx("chip", item.id === purposeId && "is-active")}
-              aria-pressed={item.id === purposeId}
-              onClick={() => onPurposeChange(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
+      <section aria-labelledby="text-label" className="flex flex-col gap-3">
+        <h3 id="text-label" className="field-label">
+          Watermark text
+        </h3>
+        <div className="segmented">
+          <button
+            type="button"
+            className={cx(
+              "segmented-btn",
+              textMode === "suggested" && "is-active",
+            )}
+            aria-pressed={textMode === "suggested"}
+            onClick={() => onTextModeChange("suggested")}
+          >
+            Help me write it
+          </button>
+          <button
+            type="button"
+            className={cx(
+              "segmented-btn",
+              textMode === "custom" && "is-active",
+            )}
+            aria-pressed={textMode === "custom"}
+            onClick={() => onTextModeChange("custom")}
+          >
+            Custom
+          </button>
         </div>
-      </fieldset>
 
-      <div className="rounded-xl border border-line bg-ground p-3.5">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-3">
-            Watermark text
-          </span>
-          {textMode === "suggested" ? (
-            <button type="button" className="link-btn" onClick={onEditText}>
-              Edit
-            </button>
-          ) : (
-            <button type="button" className="link-btn" onClick={onUseSuggested}>
-              Use suggested
-            </button>
-          )}
-        </div>
-        {textMode === "custom" ? (
-          <>
-            <input
-              type="text"
-              name="watermark-text"
-              aria-label="Watermark text"
-              value={settings.text}
-              onChange={(event) => onSettingChange("text", event.target.value)}
-              className="text-input mt-2"
-            />
-            <p className="mt-1.5 text-xs text-ink-3">
-              Your own text replaces the suggested one.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="mt-1.5 text-[15px] font-medium leading-snug text-ink">
-              {suggestedText}
-            </p>
-            <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
-              <span id="include-date-label" className="text-sm text-ink-2">
-                Add today's date
-              </span>
-              <Switch
-                checked={includeDate}
-                onChange={onIncludeDateChange}
-                labelledBy="include-date-label"
+        {textMode === "suggested" ? (
+          <div className="flex flex-col gap-4">
+            <label className="block">
+              <span className="field-sublabel">Who is it for?</span>
+              <input
+                type="text"
+                name="wm-recipient"
+                value={recipient}
+                onChange={(event) => onRecipientChange(event.target.value)}
+                placeholder="Company or person, e.g. Acme Bank"
+                autoComplete="off"
+                className="text-input mt-2"
               />
+            </label>
+
+            <fieldset>
+              <legend className="field-sublabel">What is it for?</legend>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {purposes.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={cx("chip", item.id === purposeId && "is-active")}
+                    aria-pressed={item.id === purposeId}
+                    onClick={() => onPurposeChange(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="rounded-xl border border-line bg-ground px-3.5 py-3">
+              <p className="text-xs text-ink-3">Your watermark reads</p>
+              <p className="mt-1 text-[15px] font-medium leading-snug text-ink">
+                {suggestedText}
+              </p>
             </div>
-          </>
+          </div>
+        ) : (
+          <label className="block">
+            <span className="field-sublabel">Your text</span>
+            <textarea
+              name="wm-custom-text"
+              rows={3}
+              value={customText}
+              onChange={(event) => onCustomTextChange(event.target.value)}
+              placeholder="e.g. Only for Acme Bank"
+              className="text-input mt-2 resize-y leading-snug"
+            />
+            <span className="mt-2 block text-[13px] text-ink-3">
+              Say who it's for and why. Short text repeats more cleanly.
+            </span>
+          </label>
         )}
+      </section>
+
+      <div className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3">
+        <CalendarIcon className="h-5 w-5 shrink-0 text-ink-2" />
+        <div className="min-w-0 flex-1">
+          <p id="include-date-label" className="text-sm font-medium text-ink">
+            Add today's date
+          </p>
+          <p className="text-[13px] text-ink-3">
+            {includeDate ? dateLabel : "No date on the watermark"}
+          </p>
+        </div>
+        <Switch
+          checked={includeDate}
+          onChange={onIncludeDateChange}
+          labelledBy="include-date-label"
+        />
       </div>
 
       <fieldset>
@@ -1882,11 +2172,6 @@ function WatermarkPanel({
             </button>
           ))}
         </div>
-        <p className="mt-2 text-[13px] text-ink-3">
-          {activeStrength
-            ? activeStrength.note
-            : "Custom settings. Pick a strength to start from a preset."}
-        </p>
       </fieldset>
 
       <details className="group rounded-xl border border-line">
@@ -2062,163 +2347,52 @@ function WatermarkPanel({
         </div>
       </details>
 
-      <div className="mt-auto flex gap-2 pt-2">
-        <button
-          type="button"
-          className="action-btn action-btn-quiet py-3"
-          onClick={onBack}
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          className="action-btn action-btn-primary flex-1 py-3"
-          onClick={onNext}
-        >
-          Next: Export
-        </button>
-      </div>
-    </div>
-  );
-}
-
-type ExportPanelProps = {
-  redactionCount: number;
-  watermarkText: string;
-  needsRecipient: boolean;
-  fileName: string;
-  onDownload: () => void;
-  onGoTo: (step: Step) => void;
-};
-
-function ExportPanel({
-  redactionCount,
-  watermarkText,
-  needsRecipient,
-  fileName,
-  onDownload,
-  onGoTo,
-}: ExportPanelProps) {
-  const hasWatermark = watermarkText.trim().length > 0;
-
-  return (
-    <div className="flex flex-1 flex-col gap-5">
-      <StepHeading
-        step={3}
-        title="Ready to send"
-        description="A last check before the file leaves your hands."
-      />
-
-      <ul className="rounded-xl border border-line">
-        {redactionCount > 0 ? (
-          <CheckItem tone="done">
-            {redactionCount} {redactionCount === 1 ? "detail" : "details"}{" "}
-            hidden
-          </CheckItem>
-        ) : (
-          <CheckItem tone="todo">
-            Nothing hidden.{" "}
-            <button
-              type="button"
-              className="link-btn"
-              onClick={() => onGoTo("hide")}
-            >
-              Hide details
-            </button>
-          </CheckItem>
+      <div className="mt-auto flex flex-col gap-2 pt-2">
+        {needsRecipient && (
+          <p className="rounded-lg bg-[#fff4e5] px-3 py-2 text-[13px] text-[#8a4b00]">
+            The watermark still says [Company]. Add who it's for above.
+          </p>
         )}
-        {!hasWatermark ? (
-          <CheckItem tone="warn">
-            No watermark text.{" "}
-            <button
-              type="button"
-              className="link-btn"
-              onClick={() => onGoTo("mark")}
-            >
-              Add it
-            </button>
-          </CheckItem>
-        ) : needsRecipient ? (
-          <CheckItem tone="warn">
-            The watermark says [Company].{" "}
-            <button
-              type="button"
-              className="link-btn"
-              onClick={() => onGoTo("mark")}
-            >
-              Add who it's for
-            </button>
-          </CheckItem>
-        ) : (
-          <CheckItem tone="done">
-            Watermark across the whole image
-            <span className="mt-0.5 block text-[13px] text-ink-3">
-              {watermarkText}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="action-btn action-btn-quiet py-3"
+            onClick={onBack}
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            className="action-btn action-btn-primary flex-1 py-3"
+            onClick={onDownload}
+          >
+            <DownloadIcon className="h-4 w-4" />
+            Download
+          </button>
+        </div>
+        {canCopyImage && (
+          <button
+            type="button"
+            className="action-btn action-btn-outline"
+            disabled={copyStatus === "copying"}
+            onClick={onCopy}
+          >
+            {copyStatus === "copied" ? (
+              <CheckIcon className="h-4 w-4" />
+            ) : (
+              <CopyIcon className="h-4 w-4" />
+            )}
+            <span aria-live="polite">
+              {copyStatus === "copying"
+                ? "Copying…"
+                : copyStatus === "copied"
+                  ? "Copied"
+                  : "Copy to clipboard"}
             </span>
-          </CheckItem>
+          </button>
         )}
-        <CheckItem tone="done">Location and camera data removed</CheckItem>
-        <CheckItem tone="done">Made on this device, nothing uploaded</CheckItem>
-      </ul>
-
-      <div>
-        <h3 className="field-label">File name</h3>
-        <p className="mt-2 break-all rounded-xl border border-line bg-ground px-3 py-2.5 font-mono text-[13px] text-ink">
-          {fileName}
-        </p>
-      </div>
-
-      <div className="mt-auto pt-2">
-        <button
-          type="button"
-          className="action-btn action-btn-primary w-full py-3"
-          onClick={onDownload}
-        >
-          <DownloadIcon className="h-4 w-4" />
-          Download protected image
-        </button>
-        <p className="mt-2 text-center text-xs text-ink-3">
-          PNG · Processed privately on your device
-        </p>
-        <button
-          type="button"
-          className="link-btn mx-auto mt-3 block"
-          onClick={() => onGoTo("mark")}
-        >
-          Back to watermark
-        </button>
       </div>
     </div>
-  );
-}
-
-type CheckItemProps = {
-  tone: "done" | "todo" | "warn";
-  children: ReactNode;
-};
-
-function CheckItem({ tone, children }: CheckItemProps) {
-  return (
-    <li className="flex items-start gap-3 border-b border-line px-3.5 py-3 text-sm text-ink last:border-b-0">
-      <span
-        aria-hidden="true"
-        className={cx(
-          "grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full text-xs font-bold",
-          tone === "done" && "bg-[#e7f5ec] text-[#0e6b41]",
-          tone === "warn" && "bg-[#fff4e5] text-[#8a4b00]",
-          tone === "todo" && "bg-[#f0f2f5] text-ink-3",
-        )}
-      >
-        {tone === "done" ? (
-          <CheckIcon className="h-3.5 w-3.5" />
-        ) : tone === "warn" ? (
-          "!"
-        ) : (
-          "–"
-        )}
-      </span>
-      <div className="min-w-0 flex-1 pt-px">{children}</div>
-    </li>
   );
 }
 
