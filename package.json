@@ -1,7 +1,7 @@
 {
-  "name": "kycer",
+  "name": "kycwatermark.com",
   "version": "1.0.0",
-  "description": "Offline KYC watermark tool",
+  "description": "Watermark your ID before you hand it over.",
   "type": "module",
   "scripts": {
     "dev": "vite",
