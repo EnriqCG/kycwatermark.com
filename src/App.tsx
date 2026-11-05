@@ -7,7 +7,6 @@ import {
   type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
@@ -67,6 +66,11 @@ import {
   SAMPLE_WIDTH,
 } from "./rendering/sampleDocument";
 import {
+  defaultWatermarkSettings,
+  getWatermarkFont,
+  renderWatermarkPreview,
+} from "./rendering/watermarkPreview";
+import {
   renderWatermarkedImage,
   WatermarkLayerCache,
 } from "./rendering/watermarkRenderer";
@@ -114,18 +118,7 @@ const watermarkPreset: Preset = {
     "Add a purpose-specific watermark to ID images without uploading anything. Everything stays local in your browser.",
   hint: "Start with Bold, then adjust visibility and coverage so required details remain readable.",
   downloadName: "watermarked-id.png",
-  initialSettings: {
-    text: "Only for verification at [Company]",
-    pattern: "woven",
-    ...recommendedStrength.values,
-    angle: -24,
-    color: "#353B46",
-    grayscale: false,
-    offsetX: 0,
-    offsetY: 0,
-    lineGap: 12,
-    stagger: 0,
-  },
+  initialSettings: defaultWatermarkSettings,
 };
 
 const steps: ReadonlyArray<{ id: Step; label: string }> = [
@@ -151,8 +144,6 @@ const colorSwatches = [
   { name: "White", hex: "#FFFFFF" },
 ] as const;
 
-const previewRows = [0, 1, 2, 3, 4, 5, 6] as const;
-
 // Security-print line work, computed once.
 const heroContours = contours();
 const dropRosette = rings(210, 210, 12, 92, 8.5, 18, 7, 0.3);
@@ -167,10 +158,6 @@ const repositoryUrl = "https://github.com/EnriqCG/kycwatermark.com";
 const canCopyImage =
   typeof ClipboardItem !== "undefined" &&
   typeof navigator.clipboard?.write === "function";
-
-function getWatermarkFont(fontSize: number) {
-  return `600 ${fontSize}px "Avenir Next", "Sora", "Manrope", "Trebuchet MS", "Segoe UI", sans-serif`;
-}
 
 function App() {
   return <WatermarkStudio preset={watermarkPreset} />;
@@ -746,13 +733,7 @@ function MiniCard({ watermark = false, children }: MiniCardProps) {
       <span className="h-[52px] w-10 shrink-0 rounded-[5px] bg-[#c9d3cb]" />
       <div className="flex flex-1 flex-col gap-[7px]">{children}</div>
       {watermark && (
-        <div className="absolute -left-[40%] -top-[60%] flex h-[220%] w-[180%] -rotate-[32deg] flex-col justify-center gap-3 whitespace-nowrap text-[10px] font-semibold text-[#353b46] opacity-50">
-          {previewRows.map((row) => (
-            <span key={row} className={cx(row % 2 === 1 && "-ml-10")}>
-              FOR ACME BANK · FOR ACME BANK · FOR ACME BANK · FOR ACME BANK
-            </span>
-          ))}
-        </div>
+        <PatternPreview className="pointer-events-none absolute inset-0 h-full w-full" />
       )}
     </div>
   );
@@ -779,53 +760,14 @@ function SamplePreview({ text }: SamplePreviewProps) {
       source.height = SAMPLE_HEIGHT;
       const redactions = drawSampleDocument(sourceContext);
 
-      const settings = watermarkPreset.initialSettings;
-      const scaled = scaleWatermarkSettings(
-        settings,
-        getScaleFactor(SAMPLE_WIDTH, SAMPLE_HEIGHT),
-      );
-      const font = getWatermarkFont(scaled.fontSize);
-      context.font = font;
-      const { lines, textWidth } = wrapWatermarkText(
+      renderWatermarkPreview(
+        context,
+        source,
         text,
-        scaled.spacingX - scaled.fontSize * 0.6,
-        (line) => context.measureText(line).width,
-      );
-      const spacing = getEffectiveWatermarkSpacing(
-        lines,
-        textWidth,
-        scaled.fontSize,
-        scaled.spacingX,
-        scaled.spacingY,
-        scaled.lineGap,
-      );
-
-      renderWatermarkedImage(context, source, {
-        width: SAMPLE_WIDTH,
-        height: SAMPLE_HEIGHT,
-        watermarked: true,
-        grayscale: settings.grayscale,
+        defaultWatermarkSettings,
         redactions,
-        lines,
-        text,
-        opacity: settings.opacity,
-        color: settings.color,
-        font,
-        angleDegrees: settings.angle,
-        offsetX: scaled.offsetX,
-        offsetY: scaled.offsetY,
-        spacingX: spacing.spacingX,
-        spacingY: spacing.spacingY,
-        fontSize: scaled.fontSize,
-        lineGap: scaled.lineGap,
-        stagger: scaled.stagger,
-        pattern: settings.pattern,
-        textureDensity: settings.textureDensity,
-        wovenFontSize: scaled.wovenFontSize,
-        waveFrequency: settings.waveFrequency,
-        letterWarp: settings.letterWarp,
-        patternSeed: 0x4b5943,
-      });
+      );
+      source.width = source.height = 0;
     });
 
     return () => {
@@ -839,7 +781,7 @@ function SamplePreview({ text }: SamplePreviewProps) {
       width={SAMPLE_WIDTH}
       height={SAMPLE_HEIGHT}
       role="img"
-      aria-label="Sample ID card with three details blacked out and a repeating watermark"
+      aria-label="Sample ID card with three details blacked out and dense woven watermark text"
       className="block h-auto w-full rounded-[3%/4.75%] bg-specimen shadow-[0_30px_60px_-24px_rgba(16,36,29,0.3),0_2px_6px_rgba(16,36,29,0.08)]"
     />
   );
@@ -2672,61 +2614,69 @@ type StrengthPreviewProps = {
   pattern: WatermarkSettings["pattern"];
 };
 
+// The thumbnails show a crop of the real pattern, not decorative stand-ins.
 function StrengthPreview({ values, pattern }: StrengthPreviewProps) {
-  const id = useId();
-  const curveGap = 11 - values.textureDensity * 5;
-  const barHeight = Math.max(2, Math.round(values.fontSize / 9));
-  const rowGap = Math.round(values.spacingY / 22);
-
   return (
-    <span
-      aria-hidden="true"
-      className="relative block h-10 overflow-hidden rounded-lg bg-specimen"
-    >
-      {pattern === "woven" && (
-        <svg
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full text-ink"
-          viewBox="0 0 80 40"
-          preserveAspectRatio="none"
-          style={{ opacity: values.opacity * 0.8 }}
-        >
-          {previewRows.map((row) => (
-            <g key={row}>
-              <path
-                id={`${id}-${row}`}
-                d={Array.from({ length: 21 }, (_, index) => {
-                  const x = -10 + index * 5;
-                  const y =
-                    row * curveGap +
-                    3 * Math.sin((x * values.waveFrequency) / 24 + row * 0.1);
-                  return `${index === 0 ? "M" : "L"}${x} ${y}`;
-                }).join(" ")}
-                fill="none"
-              />
-              <text fill="currentColor" fontSize="4" fontWeight="600">
-                <textPath href={`#${id}-${row}`}>
-                  ONLY FOR ACME · ONLY FOR ACME · ONLY FOR ACME
-                </textPath>
-              </text>
-            </g>
-          ))}
-        </svg>
-      )}
-      {pattern === "text" && (
-        <span
-          className="absolute -inset-x-[40%] -inset-y-[80%] flex -rotate-[32deg] flex-col justify-center"
-          style={{ gap: rowGap, opacity: values.opacity }}
-        >
-          {previewRows.map((row) => (
-            <span
-              key={row}
-              className={cx("strength-bar", row % 2 === 1 && "-ml-2")}
-              style={{ height: barHeight }}
-            />
-          ))}
-        </span>
-      )}
+    <PatternPreview
+      values={values}
+      pattern={pattern}
+      detail
+      className="block h-10 w-full overflow-hidden rounded-lg bg-specimen"
+    />
+  );
+}
+
+function PatternPreview({
+  values = recommendedStrength.values,
+  pattern = "woven",
+  detail = false,
+  className,
+}: {
+  values?: StrengthValues;
+  pattern?: WatermarkSettings["pattern"];
+  detail?: boolean;
+  className: string;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    document.fonts.ready.then(() => {
+      const context = canvasRef.current?.getContext("2d");
+      if (cancelled || !context) return;
+      const source = document.createElement("canvas");
+      const rendered = document.createElement("canvas");
+      source.width = rendered.width = 1000;
+      source.height = rendered.height = 630;
+      const drawing = rendered.getContext("2d");
+      try {
+        if (!drawing) return;
+        renderWatermarkPreview(drawing, source, "Only for Acme Bank", {
+          ...defaultWatermarkSettings,
+          ...values,
+          pattern,
+        });
+        context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+        if (detail && pattern === "woven") {
+          context.drawImage(rendered, 380, 243, 240, 144, 0, 0, 720, 432);
+        } else {
+          context.drawImage(rendered, 0, 0, 720, 432);
+        }
+      } finally {
+        source.width = source.height = rendered.width = rendered.height = 0;
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [values, pattern, detail]);
+  return (
+    <span aria-hidden="true" className={className}>
+      <canvas
+        ref={canvasRef}
+        width={720}
+        height={432}
+        className="block h-full w-full"
+      />
     </span>
   );
 }
