@@ -1,0 +1,23 @@
+{
+  "name": "KYCWatermark.com",
+  "short_name": "KYCWatermark",
+  "description": "Add purpose-specific watermarks to ID documents and KYC images directly in your browser. Free, offline, open source.",
+  "lang": "en",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f6f1",
+  "theme_color": "#f4f6f1",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
