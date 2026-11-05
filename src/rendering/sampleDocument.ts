@@ -1,3 +1,4 @@
+import { rings } from "../guilloche";
 import type { RedactionRect } from "../imageLogic";
 
 export const SAMPLE_WIDTH = 1712;
@@ -85,14 +86,14 @@ export function drawSampleDocument(
 
   context.save();
   context.textBaseline = "top";
-  context.fillStyle = "#E4EAF1";
+  context.fillStyle = "#E3E9E2";
   context.fillRect(0, 0, SAMPLE_WIDTH, SAMPLE_HEIGHT);
 
   const titleSize = 2.6 * u;
   setText(
     context,
     `700 ${titleSize}px ${sansFamily}`,
-    "#18212E",
+    "#10241D",
     0.12,
     titleSize,
   );
@@ -102,7 +103,7 @@ export function drawSampleDocument(
   setText(
     context,
     `500 ${subtitleSize}px ${sansFamily}`,
-    "#4D5A6B",
+    "#52615A",
     0.08,
     subtitleSize,
   );
@@ -115,18 +116,21 @@ export function drawSampleDocument(
   const sealSize = 6.5 * u;
   const sealX = SAMPLE_WIDTH - padLeft - sealSize / 2;
   const sealY = padTop + sealSize / 2;
-  context.strokeStyle = "#8A97A8";
-  context.lineWidth = sealSize / 20;
-  for (const radius of [0.425, 0.225]) {
-    context.beginPath();
-    context.arc(sealX, sealY, sealSize * radius, 0, Math.PI * 2);
-    context.stroke();
-  }
+  // A guilloche rosette, drawn a little larger than the space it reserves.
+  const sealDrawSize = 8 * u;
+  context.save();
+  context.translate(sealX - sealDrawSize / 2, sealY - sealDrawSize / 2);
+  context.scale(sealDrawSize / 100, sealDrawSize / 100);
+  context.globalAlpha = 0.5;
+  context.strokeStyle = "#1D6B50";
+  context.lineWidth = 1.3;
+  context.stroke(new Path2D(rings(50, 50, 7, 20, 3.6, 14, 3.5, 0.45)));
+  context.restore();
 
   const bodyTop = padTop + sealSize + 2.6 * u;
   const photoWidth = 22 * u;
   const photoHeight = (photoWidth * 4) / 3;
-  context.fillStyle = "#C5CFDB";
+  context.fillStyle = "#C9D3CB";
   context.beginPath();
   context.roundRect(padLeft, bodyTop, photoWidth, photoHeight, 1.4 * u);
   context.fill();
@@ -139,7 +143,7 @@ export function drawSampleDocument(
   context.beginPath();
   context.roundRect(padLeft, bodyTop, photoWidth, photoHeight, 1.4 * u);
   context.clip();
-  context.fillStyle = "#A3B0C1";
+  context.fillStyle = "#A5B3A9";
   context.beginPath();
   context.arc(
     iconLeft + 30 * iconScale,
@@ -184,14 +188,14 @@ export function drawSampleDocument(
       setText(
         context,
         `500 ${labelSize}px ${sansFamily}`,
-        "#556273",
+        "#52615A",
         0.06,
         labelSize,
       );
       context.fillText(field.label, x, y);
 
       const valueY = y + labelSize * 1.4 + 0.5 * u;
-      setText(context, `600 ${valueSize}px ${sansFamily}`, "#18212E");
+      setText(context, `600 ${valueSize}px ${sansFamily}`, "#10241D");
       context.fillText(field.value, x, valueY);
 
       if (field.sensitive) {
@@ -204,7 +208,7 @@ export function drawSampleDocument(
   const mrzSize = 2.4 * u;
   const mrzLineHeight = mrzSize * 1.45;
   const mrzTop = SAMPLE_HEIGHT - padBottom - mrzLineHeight * mrzLines.length;
-  setText(context, `400 ${mrzSize}px ${monoFamily}`, "#2A3442", 0.14, mrzSize);
+  setText(context, `400 ${mrzSize}px ${monoFamily}`, "#1E3129", 0.14, mrzSize);
   let mrzWidth = 0;
   mrzLines.forEach((line, index) => {
     context.fillText(line, padLeft, mrzTop + index * mrzLineHeight);

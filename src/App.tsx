@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import cx from "./cx";
+import { contours, rings, waves } from "./guilloche";
 import ArrowRightIcon from "./icon/ArrowRightIcon";
 import CalendarIcon from "./icon/CalendarIcon";
 import CameraIcon from "./icon/CameraIcon";
@@ -98,7 +99,23 @@ type StrengthPreset = {
   id: string;
   label: string;
   values: StrengthValues;
+  // Wavy lines drawn on the tile, standing in for the repeated text.
+  swatch: { path: string; strokeWidth: number; opacity: number };
 };
+
+function strengthSwatch(
+  count: number,
+  top: number,
+  gap: number,
+  strokeWidth: number,
+  opacity: number,
+) {
+  return {
+    path: waves(60, count, top, gap, 2.5, 0.25, 0.8),
+    strokeWidth,
+    opacity,
+  };
+}
 
 const watermarkPreset: Preset = {
   title: "Document Watermark",
@@ -144,21 +161,25 @@ const strengthPresets: readonly StrengthPreset[] = [
     id: "subtle",
     label: "Subtle",
     values: { opacity: 0.22, fontSize: 30, spacingX: 560, spacingY: 220 },
+    swatch: strengthSwatch(3, 8, 6, 0.9, 0.35),
   },
   {
     id: "balanced",
     label: "Balanced",
     values: { opacity: 0.4, fontSize: 34, spacingX: 520, spacingY: 180 },
+    swatch: strengthSwatch(5, 6, 4, 1.1, 0.6),
   },
   {
     id: "bold",
     label: "Bold",
     values: { opacity: 0.55, fontSize: 44, spacingX: 560, spacingY: 190 },
+    swatch: strengthSwatch(5, 6, 4, 1.8, 0.8),
   },
   {
     id: "dense",
     label: "Dense",
     values: { opacity: 0.32, fontSize: 26, spacingX: 360, spacingY: 120 },
+    swatch: strengthSwatch(12, 3, 2, 1, 0.7),
   },
 ];
 
@@ -170,6 +191,14 @@ const colorSwatches = [
 ] as const;
 
 const previewRows = [0, 1, 2, 3, 4, 5, 6] as const;
+
+// Security-print line work, computed once.
+const heroContours = contours();
+const dropRosette = rings(210, 210, 12, 92, 8.5, 18, 7, 0.3);
+const protectedSeal = rings(50, 50, 5, 26, 4, 12, 3.5, 0.5);
+
+// Selection outline drawn on the editor canvas; reads on black boxes and paper.
+const selectionColor = "#5fd4a4";
 
 const repositoryUrl = "https://github.com/EnriqCG/kycwatermark.com";
 
@@ -335,11 +364,12 @@ function LandingPage({
   );
 
   return (
-    <div id="top" className="min-h-screen bg-ground text-ink">
-      <header className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-4 sm:px-6">
+    <div id="top" className="min-h-screen overflow-x-clip bg-ground text-ink">
+      <header className="relative z-10 mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-4 sm:px-6">
+        {/* Logo slot: the logo goes before the wordmark once there is one. */}
         <a
           href="#top"
-          className="shrink-0 font-semibold tracking-tight text-ink"
+          className="shrink-0 font-semibold tracking-[-0.01em] text-ink"
         >
           KYCWatermark.com
         </a>
@@ -363,15 +393,31 @@ function LandingPage({
       </header>
 
       <main>
-        <section className="mx-auto flex max-w-[1200px] flex-col items-center px-4 pt-10 text-center sm:px-6 sm:pt-14">
-          <p className="inline-flex items-center gap-2 rounded-full bg-success-soft py-1.5 pl-2.5 pr-3 text-[13px] font-medium text-success sm:text-sm">
+        <section className="relative isolate mx-auto flex max-w-[1200px] flex-col items-center px-4 pt-10 text-center sm:px-6 sm:pt-14">
+          <svg
+            viewBox="0 0 1600 700"
+            preserveAspectRatio="xMidYMid slice"
+            aria-hidden="true"
+            className="hero-lines text-accent"
+          >
+            <path
+              d={heroContours}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={0.8}
+              opacity={0.16}
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+          <p className="inline-flex items-center gap-2 rounded-full bg-accent-soft py-1.5 pl-2.5 pr-3.5 text-[13px] font-medium text-accent-ink sm:text-sm">
             <DeviceIcon className="h-4 w-4" />
             Runs in your browser. No data is sent anywhere.
           </p>
-          <h1 className="mt-5 max-w-[860px] text-balance text-[40px] font-semibold leading-[1.06] tracking-[-0.035em] sm:text-6xl sm:leading-[1.04]">
-            Watermark your ID before you hand it over.
+          <h1 className="mt-[22px] max-w-[900px] text-balance font-display text-[clamp(42px,5.6vw,76px)] font-normal leading-[1.02] tracking-[-0.02em]">
+            Watermark your ID before you{" "}
+            <RedactedPhrase>hand it over.</RedactedPhrase>
           </h1>
-          <p className="mt-5 max-w-[640px] text-pretty text-[17px] leading-relaxed text-ink-2 sm:text-[19px]">
+          <p className="mt-[22px] max-w-[640px] text-pretty text-[17px] leading-relaxed text-ink-2 sm:text-[19px]">
             Black out what they don't need, stamp who it's for and when, and
             download a copy that's clearly marked for that purpose only.
           </p>
@@ -380,18 +426,31 @@ function LandingPage({
         <section
           ref={startRef}
           aria-label="Start"
-          className="mx-auto mt-10 max-w-[1200px] px-4 sm:mt-12 sm:px-6"
+          className="relative z-10 mx-auto mt-10 max-w-[1200px] px-4 sm:mt-12 sm:px-6"
           {...dropHandlers}
         >
-          <div className="flex flex-wrap gap-3 rounded-3xl border border-line bg-white p-3 shadow-[0_1px_2px_rgba(14,18,24,0.04),0_24px_48px_-24px_rgba(14,18,24,0.14)]">
+          <div className="flex flex-wrap gap-3 rounded-[26px] border border-line bg-paper p-3 shadow-[0_1px_2px_rgba(16,36,29,0.04),0_24px_48px_-24px_rgba(16,36,29,0.16)]">
             <div
               className={cx(
-                "flex min-h-[340px] min-w-0 flex-[1_1_400px] flex-col items-center justify-center gap-5 rounded-2xl border-[1.5px] border-dashed px-6 py-10 text-center transition-colors sm:min-h-[460px]",
+                "relative isolate flex min-h-[340px] min-w-0 flex-[1_1_400px] flex-col items-center justify-center gap-[22px] overflow-hidden rounded-[18px] border-[1.5px] border-dashed px-6 py-10 text-center transition-colors sm:min-h-[460px]",
                 isDragActive
                   ? "border-accent bg-accent-soft"
-                  : "border-[#c4cbd6] bg-[#fafbfc]",
+                  : "border-[#a9b6ad] bg-[#f8f9f5]",
               )}
             >
+              <svg
+                viewBox="0 0 420 420"
+                aria-hidden="true"
+                className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 text-accent"
+              >
+                <path
+                  d={dropRosette}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={0.7}
+                  opacity={0.16}
+                />
+              </svg>
               {draft && !isDragActive ? (
                 <DraftSummary
                   draft={draft}
@@ -402,16 +461,22 @@ function LandingPage({
                 />
               ) : (
                 <>
-                  <span className="grid h-16 w-16 place-items-center rounded-[18px] bg-accent-soft text-accent">
+                  <span
+                    className={cx(
+                      "grid h-16 w-16 place-items-center rounded-full bg-accent-soft text-accent",
+                      !isDragActive &&
+                        "shadow-[0_0_0_6px_#f8f9f5,0_0_0_7px_var(--color-accent-soft)]",
+                    )}
+                  >
                     <UploadIcon className="h-7 w-7" />
                   </span>
                   <div>
-                    <h2 className="text-2xl font-semibold tracking-tight">
+                    <h2 className="font-display text-[32px] font-medium leading-[1.1] tracking-[-0.01em]">
                       {isDragActive
                         ? "Drop to open it"
                         : "Drop your document here"}
                     </h2>
-                    <p className="mt-2 text-[15px] text-ink-3">
+                    <p className="mt-1.5 text-[15px] text-ink-3">
                       PNG, JPG, WebP or HEIC · up to 20 MB
                     </p>
                   </div>
@@ -434,7 +499,7 @@ function LandingPage({
                   </div>
                   <button
                     type="button"
-                    className="link-btn text-[15px] font-medium"
+                    className="link-btn py-1.5 text-[15px] font-medium"
                     onClick={onTrySample}
                   >
                     No document handy? Try it with a sample ID →
@@ -448,13 +513,11 @@ function LandingPage({
               )}
             </div>
 
-            <div className="canvas-dots flex min-w-0 flex-[1.25_1_480px] flex-col justify-center gap-5 rounded-2xl px-5 py-6 sm:px-8 sm:pb-8 sm:pt-7">
+            <div className="paper-lines flex min-w-0 flex-[1.25_1_480px] flex-col justify-center gap-5 rounded-[18px] px-5 py-6 sm:px-8 sm:pb-8 sm:pt-7">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-2">
-                  What the company receives
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-1 text-[13px] font-medium">
-                  <span className="h-[7px] w-2.5 rounded-[2px] bg-[#0b0d10]" />
+                <span className="eyebrow">What the company receives</span>
+                <span className="inline-flex h-[30px] items-center gap-2 rounded-full border border-line bg-paper px-3 text-[13px] font-medium">
+                  <span className="h-[7px] w-3 rounded-[2px] bg-redact" />
                   {draft
                     ? describeHidden(draft.redactionCount)
                     : describeHidden(3)}
@@ -480,7 +543,7 @@ function LandingPage({
         >
           {privacyPoints.map(({ icon: Icon, title, body }) => (
             <div key={title} className="flex flex-col gap-2.5">
-              <span className="grid h-10 w-10 place-items-center rounded-xl border border-line bg-white">
+              <span className="grid h-11 w-11 place-items-center rounded-full border border-line bg-paper text-accent">
                 <Icon className="h-5 w-5" />
               </span>
               <h3 className="mt-1 text-[17px] font-semibold">{title}</h3>
@@ -494,24 +557,18 @@ function LandingPage({
           aria-labelledby="how-title"
           className="mx-auto mt-24 flex max-w-[1200px] scroll-mt-6 flex-col gap-8 px-4 sm:mt-[120px] sm:px-6"
         >
-          <div className="flex flex-col gap-2">
-            <p className="section-label">How it works</p>
-            <h2
-              id="how-title"
-              className="text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] sm:text-[40px]"
-            >
-              Three steps, all on your device
-            </h2>
-          </div>
+          <h2 id="how-title" className="section-title">
+            Three steps, all on your device
+          </h2>
           <ol className="grid gap-4 md:grid-cols-3">
             <HowStep
               title="Add your document"
               body="Drop a scan or photo of your ID, or take a picture with your phone's camera."
             >
-              <div className="grid h-[116px] w-[180px] place-items-center rounded-xl border-[1.5px] border-dashed border-[#9aa6b6] bg-white/60">
-                <div className="flex flex-col items-center gap-2 text-accent">
+              <div className="grid h-[116px] w-[180px] place-items-center rounded-xl border-[1.5px] border-dashed border-[#a9b6ad] bg-paper/70">
+                <div className="flex flex-col items-center gap-2.5 text-accent">
                   <UploadIcon className="h-[26px] w-[26px]" />
-                  <span className="h-1.5 w-[72px] rounded-full bg-[#c9d1dc]" />
+                  <span className="h-1.5 w-[72px] rounded-full bg-[#c9d3cb]" />
                 </div>
               </div>
             </HowStep>
@@ -520,11 +577,11 @@ function LandingPage({
               body="Drag boxes over your document number, address or anything the company hasn't asked for."
             >
               <MiniCard>
-                <span className="h-1.5 w-4/5 rounded-full bg-[#a9b5c4]" />
-                <span className="h-1.5 w-3/5 rounded-full bg-[#a9b5c4]" />
-                <span className="h-2.5 w-[90%] rounded-[2px] bg-[#0b0d10]" />
-                <span className="h-1.5 w-1/2 rounded-full bg-[#a9b5c4]" />
-                <span className="h-2.5 w-full rounded-[2px] bg-[#0b0d10]" />
+                <span className="h-1.5 w-4/5 rounded-full bg-[#a9b6ad]" />
+                <span className="h-1.5 w-3/5 rounded-full bg-[#a9b6ad]" />
+                <span className="h-2.5 w-[90%] rounded-[2px] bg-redact" />
+                <span className="h-1.5 w-1/2 rounded-full bg-[#a9b6ad]" />
+                <span className="h-2.5 w-full rounded-[2px] bg-redact" />
               </MiniCard>
             </HowStep>
             <HowStep
@@ -532,9 +589,9 @@ function LandingPage({
               body="Say who it's for and why. Today's date is added for you, then download it or copy it."
             >
               <MiniCard watermark>
-                <span className="h-1.5 w-4/5 rounded-full bg-[#a9b5c4]" />
-                <span className="h-1.5 w-3/5 rounded-full bg-[#a9b5c4]" />
-                <span className="h-1.5 w-[70%] rounded-full bg-[#a9b5c4]" />
+                <span className="h-1.5 w-4/5 rounded-full bg-[#a9b6ad]" />
+                <span className="h-1.5 w-3/5 rounded-full bg-[#a9b6ad]" />
+                <span className="h-1.5 w-[70%] rounded-full bg-[#a9b6ad]" />
               </MiniCard>
             </HowStep>
           </ol>
@@ -546,10 +603,7 @@ function LandingPage({
           className="mx-auto mt-24 flex max-w-[1200px] scroll-mt-6 flex-wrap gap-x-12 gap-y-8 px-4 sm:mt-[120px] sm:px-6"
         >
           <div className="flex flex-[1_1_280px] flex-col gap-3">
-            <h2
-              id="faq-title"
-              className="text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] sm:text-[40px]"
-            >
+            <h2 id="faq-title" className="section-title">
               FAQ
             </h2>
             <p className="text-ink-2">
@@ -579,6 +633,7 @@ function LandingPage({
       </main>
 
       <footer className="mx-auto mt-24 flex max-w-[1200px] flex-wrap items-center justify-between gap-3 border-t border-line px-4 pb-10 pt-6 text-sm text-ink-3 sm:mt-[120px] sm:px-6">
+        {/* Logo slot: a small logo goes before this line once there is one. */}
         <span>Free · No account · No limits</span>
         <span className="font-mono text-[13px]">
           build {__COMMIT_HASH__}
@@ -597,10 +652,10 @@ type HowStepProps = {
 
 function HowStep({ title, body, children }: HowStepProps) {
   return (
-    <li className="flex flex-col gap-4 rounded-[20px] border border-line bg-white px-4 pb-6 pt-4">
+    <li className="flex flex-col gap-[18px] rounded-[22px] border border-line bg-paper px-4 pb-[26px] pt-4">
       <div
         aria-hidden="true"
-        className="canvas-dots grid h-[180px] place-items-center rounded-xl"
+        className="paper-lines grid h-[180px] place-items-center rounded-[14px]"
       >
         {children}
       </div>
@@ -641,7 +696,7 @@ function DraftSummary({
         In progress
       </span>
       <div className="w-full max-w-sm">
-        <h2 className="text-2xl font-semibold tracking-tight">
+        <h2 className="font-display text-[30px] font-medium leading-[1.1] tracking-[-0.01em]">
           Continue where you left off
         </h2>
         <p
@@ -711,7 +766,7 @@ function DraftPreview({ draw }: DraftPreviewProps) {
         ref={canvasRef}
         role="img"
         aria-label="Your document as it will be downloaded"
-        className="block h-auto max-h-[420px] w-auto min-w-0 max-w-full rounded-[10px] bg-white shadow-[0_30px_60px_-24px_rgba(14,18,24,0.30),0_2px_6px_rgba(14,18,24,0.08)]"
+        className="block h-auto max-h-[420px] w-auto min-w-0 max-w-full rounded-[10px] bg-paper shadow-[0_30px_60px_-24px_rgba(16,36,29,0.3),0_2px_6px_rgba(16,36,29,0.08)]"
       />
     </div>
   );
@@ -724,8 +779,8 @@ type MiniCardProps = {
 
 function MiniCard({ watermark = false, children }: MiniCardProps) {
   return (
-    <div className="relative flex h-[114px] w-[180px] gap-3 overflow-hidden rounded-[10px] bg-[#e4eaf1] p-3.5 shadow-[0_10px_24px_-12px_rgba(14,18,24,0.3)]">
-      <span className="h-[52px] w-10 shrink-0 rounded-[5px] bg-[#c5cfdb]" />
+    <div className="relative flex h-[114px] w-[180px] gap-3 overflow-hidden rounded-[10px] bg-specimen p-3.5 shadow-[0_10px_24px_-12px_rgba(16,36,29,0.3)]">
+      <span className="h-[52px] w-10 shrink-0 rounded-[5px] bg-[#c9d3cb]" />
       <div className="flex flex-1 flex-col gap-[7px]">{children}</div>
       {watermark && (
         <div className="absolute -left-[40%] -top-[60%] flex h-[220%] w-[180%] -rotate-[32deg] flex-col justify-center gap-3 whitespace-nowrap text-[10px] font-semibold text-[#353b46] opacity-50">
@@ -815,8 +870,58 @@ function SamplePreview({ text }: SamplePreviewProps) {
       height={SAMPLE_HEIGHT}
       role="img"
       aria-label="Sample ID card with three details blacked out and a repeating watermark"
-      className="block h-auto w-full rounded-[3%/4.75%] bg-[#e4eaf1] shadow-[0_30px_60px_-24px_rgba(14,18,24,0.30),0_2px_6px_rgba(14,18,24,0.08)]"
+      className="block h-auto w-full rounded-[3%/4.75%] bg-specimen shadow-[0_30px_60px_-24px_rgba(16,36,29,0.3),0_2px_6px_rgba(16,36,29,0.08)]"
     />
+  );
+}
+
+type RedactedPhraseProps = {
+  children: string;
+};
+
+// A crosshair drags a black box over the phrase once the page loads, the way
+// boxes are drawn in the editor. The text stays readable, knocked out of the
+// box, and hovering shows the box's selection outline.
+function RedactedPhrase({ children }: RedactedPhraseProps) {
+  return (
+    <span className="redact">
+      {children}
+      <span aria-hidden="true" className="redact-mask">
+        <span>{children}</span>
+      </span>
+      <span aria-hidden="true" className="redact-selection">
+        <span className="redact-delete">
+          <svg
+            viewBox="0 0 10 10"
+            aria-hidden="true"
+            className="h-[0.1em] w-[0.1em]"
+          >
+            <path
+              d="M2 2l6 6M8 2L2 8"
+              stroke="#fff"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+            />
+          </svg>
+        </span>
+      </span>
+      <span aria-hidden="true" className="redact-cursor">
+        <svg viewBox="0 0 28 28" width={28} height={28} aria-hidden="true">
+          <path
+            d="M14 2v9M14 17v9M2 14h9M17 14h9"
+            stroke="#fcfcf9"
+            strokeWidth={4}
+            strokeLinecap="round"
+          />
+          <path
+            d="M14 2v9M14 17v9M2 14h9M17 14h9"
+            stroke="#10241d"
+            strokeWidth={1.6}
+            strokeLinecap="round"
+          />
+        </svg>
+      </span>
+    </span>
   );
 }
 
@@ -1287,7 +1392,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
         context.rotate(r.angle);
 
         // Dashed selection border
-        context.strokeStyle = "#66e5ff";
+        context.strokeStyle = selectionColor;
         context.lineWidth = 2 * sf;
         context.setLineDash([6 * sf, 4 * sf]);
         context.strokeRect(-r.w / 2, -r.h / 2, r.w, r.h);
@@ -1303,9 +1408,9 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
         // Rotation handle circle
         context.beginPath();
         context.arc(0, -handleDist, handleRadius, 0, Math.PI * 2);
-        context.fillStyle = "#ffffff";
+        context.fillStyle = "#fcfcf9";
         context.fill();
-        context.strokeStyle = "#66e5ff";
+        context.strokeStyle = selectionColor;
         context.lineWidth = 2 * sf;
         context.stroke();
 
@@ -1313,16 +1418,16 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
         context.beginPath();
         context.moveTo(0, r.h / 2);
         context.lineTo(0, handleDist);
-        context.strokeStyle = "rgba(244, 63, 94, 0.6)";
+        context.strokeStyle = "rgba(194, 65, 47, 0.6)";
         context.lineWidth = 1.5 * sf;
         context.stroke();
 
         // Delete handle circle
         context.beginPath();
         context.arc(0, handleDist, handleRadius, 0, Math.PI * 2);
-        context.fillStyle = "rgba(244, 63, 94, 0.85)";
+        context.fillStyle = "#c2412f";
         context.fill();
-        context.strokeStyle = "rgba(254, 202, 202, 0.7)";
+        context.strokeStyle = "rgba(252, 252, 249, 0.75)";
         context.lineWidth = 1.5 * sf;
         context.stroke();
 
@@ -1649,19 +1754,19 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
   const viewStatus =
     previewMode === "original"
-      ? { dot: "bg-amber-500", label: "Original, not protected" }
+      ? { dot: "bg-[#c98a1b]", label: "Original, not protected" }
       : step === "hide"
         ? { dot: "bg-accent", label: "Drag over any detail to cover it" }
-        : { dot: "bg-emerald-500", label: "Protected preview" };
+        : { dot: null, label: "Protected preview" };
 
   return (
     <div className="flex min-h-screen flex-col bg-ground text-ink lg:h-screen">
       {fileInput}
 
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-line bg-white px-4 py-2.5">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-line bg-paper px-4 py-2.5">
         <button
           type="button"
-          className="icon-btn border border-line"
+          className="icon-btn h-10 w-10 border border-line text-ink-2"
           aria-label="Close editor"
           title="Close and go back to the start page"
           onClick={closeEditor}
@@ -1675,7 +1780,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
         <nav
           aria-label="Steps"
-          className="order-last grid w-full grid-cols-2 gap-1 rounded-xl bg-[#f0f2f5] p-1 md:order-none md:flex md:w-auto"
+          className="order-last grid w-full grid-cols-2 gap-1 rounded-full bg-well p-1 shadow-[inset_0_0_0_1px_#dde3db] md:order-none md:flex md:w-auto"
         >
           {steps.map((item, index) => (
             <button
@@ -1714,21 +1819,39 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <section
           aria-label="Document preview and image drop area"
-          className="canvas-dots relative flex min-h-[420px] min-w-0 flex-1 items-center justify-center px-4 pb-24 pt-16 sm:px-10"
+          className="paper-lines relative flex min-h-[420px] min-w-0 flex-1 items-center justify-center px-4 pb-24 pt-16 sm:px-10"
           {...dropHandlers}
         >
-          <p className="absolute left-1/2 top-4 inline-flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-[13px] font-medium text-ink shadow-[0_1px_2px_rgba(14,18,24,0.1),0_0_0_1px_rgba(14,18,24,0.05)]">
-            <span
-              aria-hidden="true"
-              className={cx("h-2 w-2 rounded-full", viewStatus.dot)}
-            />
+          <p className="absolute left-1/2 top-4 inline-flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-paper py-1.5 pl-3 pr-3.5 text-[13px] font-medium text-ink shadow-[0_1px_2px_rgba(16,36,29,0.1),0_0_0_1px_rgba(16,36,29,0.06)]">
+            {viewStatus.dot ? (
+              <span
+                aria-hidden="true"
+                className={cx("h-2 w-2 rounded-full", viewStatus.dot)}
+              />
+            ) : (
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 100 100"
+                aria-hidden="true"
+                className="text-seal"
+              >
+                <path
+                  d={protectedSeal}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={5}
+                />
+                <circle cx="50" cy="50" r="14" fill="currentColor" />
+              </svg>
+            )}
             {viewStatus.label}
           </p>
 
           <canvas
             ref={setCanvasElement}
             className={cx(
-              "block h-auto max-h-[60vh] w-auto min-w-0 max-w-full rounded-[10px] bg-white shadow-[0_30px_60px_-20px_rgba(14,18,24,0.28),0_2px_6px_rgba(14,18,24,0.08)] lg:max-h-[calc(100vh-14rem)]",
+              "block h-auto max-h-[60vh] w-auto min-w-0 max-w-full rounded-[10px] bg-paper shadow-[0_30px_60px_-20px_rgba(16,36,29,0.28),0_2px_6px_rgba(16,36,29,0.08)] lg:max-h-[calc(100vh-14rem)]",
               canRedact && "touch-none select-none",
             )}
             onPointerDown={handleCanvasPointerDown}
@@ -1739,7 +1862,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
           {isDragActive && (
             <div className="pointer-events-none absolute inset-0 grid place-items-center bg-accent-soft/90">
-              <p className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-accent-ink shadow-sm">
+              <p className="rounded-full bg-paper px-4 py-2 text-sm font-semibold text-accent-ink shadow-sm">
                 Drop to replace the current image
               </p>
             </div>
@@ -1748,7 +1871,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
           <div
             role="toolbar"
             aria-label="Preview"
-            className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-0.5 rounded-[14px] bg-ink p-1.5 text-white shadow-[0_12px_32px_-12px_rgba(14,18,24,0.5)]"
+            className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-0.5 rounded-full bg-ink p-1.5 text-paper shadow-[0_12px_32px_-12px_rgba(16,36,29,0.5)]"
           >
             <button
               type="button"
@@ -1772,7 +1895,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
               <>
                 <span
                   aria-hidden="true"
-                  className="mx-1.5 h-6 w-px bg-white/20"
+                  className="mx-1.5 h-6 w-px bg-paper/20"
                 />
                 <button
                   type="button"
@@ -1790,7 +1913,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
         <aside
           aria-label="Settings"
-          className="flex w-full shrink-0 flex-col border-t border-line bg-white p-5 sm:p-6 lg:w-[380px] lg:overflow-y-auto lg:border-l lg:border-t-0"
+          className="flex w-full shrink-0 flex-col border-t border-line bg-paper p-5 sm:p-6 lg:w-[380px] lg:overflow-y-auto lg:border-l lg:border-t-0"
         >
           {notice?.tone === "error" && (
             <p className="notice-error mb-4">{notice.message}</p>
@@ -1857,12 +1980,10 @@ function StepHeading({ step, title, description }: StepHeadingProps) {
       <p className="section-label">
         Step {step} of {steps.length}
       </p>
-      <h2 className="mt-1 text-[22px] font-semibold tracking-tight text-ink">
+      <h2 className="mt-1.5 font-display text-[29px] font-medium leading-[1.12] tracking-[-0.01em] text-ink">
         {title}
       </h2>
-      {description && (
-        <p className="mt-1.5 text-sm text-ink-3">{description}</p>
-      )}
+      {description && <p className="mt-2 text-sm text-ink-3">{description}</p>}
     </div>
   );
 }
@@ -1896,7 +2017,7 @@ function HideDetailsPanel({
         description="Cover anything the company hasn't asked for with a solid black box."
       />
 
-      <p className="rounded-xl border border-line bg-ground px-3.5 py-3 text-sm text-ink-2">
+      <p className="rounded-[14px] border border-line bg-ground px-3.5 py-3 text-sm text-ink-2">
         Drag on the document to add a box. Select a box to move, resize, rotate,
         or delete it.
       </p>
@@ -1907,7 +2028,7 @@ function HideDetailsPanel({
           <span className="font-mono text-xs text-ink-3">{count}</span>
         </div>
         {count === 0 ? (
-          <p className="mt-2 rounded-xl border border-dashed border-line px-3.5 py-3 text-sm text-ink-3">
+          <p className="mt-2 rounded-xl border border-dashed border-line-strong px-3.5 py-3 text-sm text-ink-3">
             Nothing hidden yet.
           </p>
         ) : (
@@ -1918,25 +2039,28 @@ function HideDetailsPanel({
                 className={cx(
                   "flex items-center gap-1 rounded-xl border pr-1",
                   selectedIndex === box
-                    ? "border-accent bg-accent-soft"
+                    ? "border-accent bg-accent-soft font-semibold"
                     : "border-line",
                 )}
               >
                 <button
                   type="button"
-                  className="flex min-h-10 flex-1 items-center gap-2.5 px-3 text-left text-sm"
+                  className="flex min-h-11 flex-1 items-center gap-2.5 px-3 text-left text-sm"
                   aria-pressed={selectedIndex === box}
                   onClick={() => onSelect(box)}
                 >
                   <span
                     aria-hidden="true"
-                    className="h-3 w-[22px] shrink-0 rounded-[3px] bg-[#0b0d10]"
+                    className="h-3 w-[22px] shrink-0 rounded-[3px] bg-redact"
                   />
                   Box {box + 1}
                 </button>
                 <button
                   type="button"
-                  className="icon-btn"
+                  className={cx(
+                    "icon-btn",
+                    selectedIndex === box && "text-accent-ink",
+                  )}
                   aria-label={`Remove box ${box + 1}`}
                   onClick={() => onRemove(box)}
                 >
@@ -1948,8 +2072,8 @@ function HideDetailsPanel({
         )}
       </div>
 
-      <div className="flex gap-3 rounded-xl bg-accent-soft px-3.5 py-3 text-sm text-[#1e3a8a]">
-        <InfoIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent-ink" />
+      <div className="flex gap-3 rounded-[14px] bg-accent-soft px-3.5 py-3 text-sm text-accent-ink">
+        <InfoIcon className="mt-px h-5 w-5 shrink-0" />
         <p>
           Many IDs repeat the document number in the code strip along the
           bottom. If you hide the number, cover that strip too.
@@ -1959,7 +2083,7 @@ function HideDetailsPanel({
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
-          className="action-btn action-btn-quiet"
+          className="action-btn action-btn-quiet h-11"
           disabled={count === 0}
           onClick={onUndo}
         >
@@ -1967,7 +2091,7 @@ function HideDetailsPanel({
         </button>
         <button
           type="button"
-          className="action-btn action-btn-quiet"
+          className="action-btn action-btn-quiet h-11"
           disabled={count === 0}
           onClick={onClear}
         >
@@ -1978,10 +2102,11 @@ function HideDetailsPanel({
       <div className="mt-auto pt-2">
         <button
           type="button"
-          className="action-btn action-btn-primary w-full py-3"
+          className="action-btn action-btn-primary action-btn-lg w-full text-[15px]"
           onClick={onNext}
         >
           {count === 0 ? "Skip to watermark" : "Next: Watermark"}
+          <ArrowRightIcon className="h-[18px] w-[18px]" />
         </button>
       </div>
     </div>
@@ -2111,7 +2236,7 @@ function WatermarkPanel({
               </div>
             </fieldset>
 
-            <div className="rounded-xl border border-line bg-ground px-3.5 py-3">
+            <div className="rounded-[14px] border border-line bg-ground px-3.5 py-3 shadow-[inset_0_0_0_3px_var(--color-ground),inset_0_0_0_4px_#e1e6df]">
               <p className="text-xs text-ink-3">Your watermark reads</p>
               <p className="mt-1 text-[15px] font-medium leading-snug text-ink">
                 {suggestedText}
@@ -2136,7 +2261,7 @@ function WatermarkPanel({
         )}
       </section>
 
-      <div className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3">
+      <div className="flex items-center gap-3 rounded-[14px] border border-line px-3.5 py-3">
         <CalendarIcon className="h-5 w-5 shrink-0 text-ink-2" />
         <div className="min-w-0 flex-1">
           <p id="include-date-label" className="text-sm font-medium text-ink">
@@ -2167,14 +2292,14 @@ function WatermarkPanel({
               aria-pressed={activeStrength?.id === strength.id}
               onClick={() => onStrengthChange(strength)}
             >
-              <StrengthPreview values={strength.values} />
+              <StrengthPreview swatch={strength.swatch} />
               {strength.label}
             </button>
           ))}
         </div>
       </fieldset>
 
-      <details className="group rounded-xl border border-line">
+      <details className="group rounded-[14px] border border-line">
         <summary className="flex h-12 cursor-pointer list-none items-center justify-between px-3.5 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
           Fine-tune
           <ChevronDownIcon className="h-4 w-4 text-ink-3 transition-transform group-open:rotate-180" />
@@ -2243,7 +2368,7 @@ function WatermarkPanel({
                   onChange={(event) =>
                     onSettingChange("color", event.target.value)
                   }
-                  className="h-7 w-9 cursor-pointer rounded-md border border-line bg-transparent p-0.5"
+                  className="h-7 w-9 cursor-pointer rounded-lg border border-line bg-transparent p-0.5"
                 />
               </fieldset>
             </div>
@@ -2349,21 +2474,21 @@ function WatermarkPanel({
 
       <div className="mt-auto flex flex-col gap-2 pt-2">
         {needsRecipient && (
-          <p className="rounded-lg bg-[#fff4e5] px-3 py-2 text-[13px] text-[#8a4b00]">
+          <p className="rounded-[10px] bg-[#fbf1de] px-3 py-2 text-[13px] text-[#7a4a06]">
             The watermark still says [Company]. Add who it's for above.
           </p>
         )}
         <div className="flex gap-2">
           <button
             type="button"
-            className="action-btn action-btn-quiet py-3"
+            className="action-btn action-btn-quiet h-[50px] px-5 text-[15px]"
             onClick={onBack}
           >
             Back
           </button>
           <button
             type="button"
-            className="action-btn action-btn-primary flex-1 py-3"
+            className="action-btn action-btn-primary h-[50px] flex-1 text-[15px] [--btn-ring:3px]"
             onClick={onDownload}
           >
             <DownloadIcon className="h-4 w-4" />
@@ -2373,7 +2498,7 @@ function WatermarkPanel({
         {canCopyImage && (
           <button
             type="button"
-            className="action-btn action-btn-outline"
+            className="action-btn action-btn-outline h-11"
             disabled={copyStatus === "copying"}
             onClick={onCopy}
           >
@@ -2397,30 +2522,29 @@ function WatermarkPanel({
 }
 
 type StrengthPreviewProps = {
-  values: StrengthValues;
+  swatch: StrengthPreset["swatch"];
 };
 
-function StrengthPreview({ values }: StrengthPreviewProps) {
-  const barHeight = Math.max(2, Math.round(values.fontSize / 9));
-  const rowGap = Math.round(values.spacingY / 22);
-
+function StrengthPreview({ swatch }: StrengthPreviewProps) {
   return (
     <span
       aria-hidden="true"
-      className="relative block h-10 overflow-hidden rounded-md bg-[#e4eaf1]"
+      className="block h-10 overflow-hidden rounded-lg bg-specimen"
     >
-      <span
-        className="absolute -inset-x-[40%] -inset-y-[80%] flex -rotate-[32deg] flex-col justify-center"
-        style={{ gap: rowGap, opacity: values.opacity }}
+      <svg
+        viewBox="0 0 60 28"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        className="block h-full w-full"
       >
-        {previewRows.map((row) => (
-          <span
-            key={row}
-            className={cx("strength-bar", row % 2 === 1 && "-ml-2")}
-            style={{ height: barHeight }}
-          />
-        ))}
-      </span>
+        <path
+          d={swatch.path}
+          fill="none"
+          stroke="#353b46"
+          strokeWidth={swatch.strokeWidth}
+          opacity={swatch.opacity}
+        />
+      </svg>
     </span>
   );
 }
@@ -2440,13 +2564,13 @@ function Switch({ checked, onChange, labelledBy }: SwitchProps) {
       aria-labelledby={labelledBy}
       onClick={() => onChange(!checked)}
       className={cx(
-        "inline-flex h-[26px] w-11 shrink-0 items-center rounded-full p-[3px] transition-colors",
-        checked ? "bg-accent" : "bg-[#c4cbd6]",
+        "inline-flex h-7 w-[46px] shrink-0 items-center rounded-full p-[3px] transition-colors",
+        checked ? "bg-accent" : "bg-[#c3cdc5]",
       )}
     >
       <span
         className={cx(
-          "h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
+          "h-[22px] w-[22px] rounded-full bg-paper shadow-[0_1px_2px_rgba(16,36,29,0.25)] transition-transform",
           checked && "translate-x-[18px]",
         )}
       />
@@ -2462,7 +2586,7 @@ type FineTuneGroupProps = {
 function FineTuneGroup({ title, children }: FineTuneGroupProps) {
   return (
     <fieldset>
-      <legend className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-3">
+      <legend className="font-mono text-[11.5px] font-medium uppercase tracking-[0.12em] text-ink-3">
         {title}
       </legend>
       <div className="mt-3 space-y-4">{children}</div>
