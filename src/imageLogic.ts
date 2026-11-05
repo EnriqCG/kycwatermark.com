@@ -1,4 +1,9 @@
 export type WatermarkSettings = {
+  pattern: "woven" | "text";
+  textureDensity: number;
+  wovenFontSize: number;
+  waveFrequency: number;
+  letterWarp: number;
   text: string;
   angle: number;
   opacity: number;
@@ -45,6 +50,7 @@ export function scaleWatermarkSettings(
 ) {
   return {
     fontSize: settings.fontSize * scaleFactor,
+    wovenFontSize: settings.wovenFontSize * scaleFactor,
     spacingX: settings.spacingX * scaleFactor,
     spacingY: settings.spacingY * scaleFactor,
     lineGap: settings.lineGap * scaleFactor,
@@ -106,8 +112,76 @@ export function getEffectiveWatermarkSpacing(
 
 export type StrengthValues = Pick<
   WatermarkSettings,
-  "opacity" | "fontSize" | "spacingX" | "spacingY"
+  | "opacity"
+  | "fontSize"
+  | "spacingX"
+  | "spacingY"
+  | "textureDensity"
+  | "wovenFontSize"
+  | "waveFrequency"
+  | "letterWarp"
 >;
+
+export const strengthPresets = [
+  {
+    id: "subtle",
+    label: "Subtle",
+    values: {
+      opacity: 0.24,
+      fontSize: 28,
+      spacingX: 520,
+      spacingY: 210,
+      textureDensity: 0.3,
+      wovenFontSize: 12,
+      waveFrequency: 1.75,
+      letterWarp: 0.2,
+    },
+  },
+  {
+    id: "balanced",
+    label: "Balanced",
+    values: {
+      opacity: 0.36,
+      fontSize: 30,
+      spacingX: 460,
+      spacingY: 175,
+      textureDensity: 0.5,
+      wovenFontSize: 11,
+      waveFrequency: 2.5,
+      letterWarp: 0.4,
+    },
+  },
+  {
+    id: "bold",
+    label: "Bold",
+    values: {
+      opacity: 0.48,
+      fontSize: 30,
+      spacingX: 420,
+      spacingY: 150,
+      textureDensity: 0.75,
+      wovenFontSize: 10,
+      waveFrequency: 3,
+      letterWarp: 0.65,
+    },
+  },
+  {
+    id: "dense",
+    label: "Dense",
+    values: {
+      opacity: 0.44,
+      fontSize: 26,
+      spacingX: 340,
+      spacingY: 115,
+      textureDensity: 1,
+      wovenFontSize: 9,
+      waveFrequency: 3.5,
+      letterWarp: 0.85,
+    },
+  },
+] as const;
+
+export const recommendedStrength = strengthPresets[2];
 
 export function composeWatermarkText(
   purpose: string,
@@ -135,9 +209,21 @@ export function findMatchingPreset<T extends { values: StrengthValues }>(
 ): T | null {
   return (
     presets.find(({ values }) =>
-      (Object.keys(values) as Array<keyof StrengthValues>).every(
-        (key) => settings[key] === values[key],
-      ),
+      (Object.keys(values) as Array<keyof StrengthValues>).every((key) => {
+        const wovenKey = [
+          "textureDensity",
+          "wovenFontSize",
+          "waveFrequency",
+          "letterWarp",
+        ].includes(key);
+        const straightKey = ["fontSize", "spacingX", "spacingY"].includes(key);
+        if (
+          (settings.pattern === "text" && wovenKey) ||
+          (settings.pattern === "woven" && straightKey)
+        )
+          return true;
+        return settings[key] === values[key];
+      }),
     ) ?? null
   );
 }
