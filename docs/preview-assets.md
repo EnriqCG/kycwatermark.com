@@ -8,12 +8,17 @@ landing page's draft preview uses the current editor settings directly.
 
 Two committed images also need refreshing after changes to the default pattern:
 
-- `docs/screenshot-editor.png`: capture the running editor in a desktop browser.
+- `docs/screenshot-editor.png`: capture the running editor at a **1440 × 1000
+  CSS pixel viewport with device scale factor 2**, producing a **2880 × 2000 PNG**.
+  Check both `innerWidth` / `innerHeight` and the saved image dimensions; some
+  capture tools export CSS pixels even when the device scale factor is 2.
+  Keep this viewport so the controls retain their original readable scale.
   Choose the sample ID, cover its document number, address and bottom code strip,
   then enter “Acme Bank” with Identity check, today's date, Woven and Bold selected.
-  Leave Fine-tune collapsed and keep the whole editor visible.
+  Leave Fine-tune collapsed and the settings panel scrolled to the top.
 - `public/og-image.jpg`: generate the 1200 × 630 share card from the current sample,
-  logo, fonts and production renderer using the module below. The example's date
+  header logo, fonts and production renderer using the module below. Preserve
+  the original card placement, type scale and privacy badge. The example's date
   and seed are fixed so repeated renders use the same pattern.
 
 With `pnpm dev` running, open the app and run this in its browser console:
