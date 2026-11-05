@@ -10,7 +10,7 @@ Black out what a company doesn't need, stamp who the copy is for and when, and d
 
 </div>
 
-![The KYCWatermark.com editor: a sample ID with its document number, address and code strip blacked out, and "Only for identity verification at Acme Bank · Nov 4, 2026" repeated across it](./docs/screenshot-editor.png)
+![The KYCWatermark.com editor: a sample ID with its document number, address and code strip blacked out, and "Only for identity verification at Acme Bank · Nov 5, 2026" repeated across it](./docs/screenshot-editor.png)
 
 ## What it does
 
