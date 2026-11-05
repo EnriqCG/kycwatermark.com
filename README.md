@@ -12,7 +12,7 @@ Black out what a company doesn't need, stamp who the copy is for and when, and d
 
 </div>
 
-![The KYCWatermark.com editor: a sample ID with its document number, address and code strip blacked out, and "Only for identity verification at Acme Bank · Nov 5, 2026" repeated across it](./docs/screenshot-editor.png)
+![The KYCWatermark.com editor: a sample ID with its document number, address and code strip blacked out, and dense curved text marking it for identity verification at Acme Bank](./docs/screenshot-editor.png)
 
 ## What it does
 
@@ -21,10 +21,18 @@ Banks, landlords and employers often ask for a copy of your passport or ID card.
 - **Hide what they don't need.** Drag black boxes over your document number, address or anything else they haven't asked for. You can move, resize, rotate or remove each box.
 - **Say who it's for.** Enter the company and pick the purpose, and the text is written for you, like "Only for identity verification at Acme Bank". Or write your own.
 - **Add today's date.** It's on by default and works with either kind of text.
-- **Choose a strength.** Pick Subtle, Balanced, Bold or Dense, then fine-tune visibility, size, direction, color, spacing and position if you need to.
+- **Choose a pattern and strength.** Woven repeats your watermark text in dense, flowing curves with curved letter strokes and gradually varying waves. It starts on Bold; choose Subtle, Balanced or Dense, or switch to Straight text. Fine-tune visibility, text density, size, wave frequency, letter variation, direction, color, spacing and position.
 - **Download or copy.** Save a PNG named after the recipient, or copy the image straight to your clipboard.
 
 No document handy? The site has a sample ID you can try it with.
+
+Each opened document gets a random pattern seed that stays fixed while editing,
+comparing and exporting. The PNG contains the final pixels, including opaque
+redactions; exports always include these edits even while comparing the original.
+Woven is intended to make clean removal more difficult, but it is not a guarantee
+against AI editing or filtering. Check that the recipient can still read required
+details. See [the rendering notes](./docs/watermark-rendering.md) for the design
+rationale and remaining resilience checks.
 
 ## Privacy
 
@@ -68,6 +76,8 @@ pnpm test
 ```
 
 This runs the unit tests and the golden rendering tests. [tests/rendering/README.md](./tests/rendering/README.md) explains the golden tests and how to approve a rendering change.
+
+When changing the default pattern, also refresh the [published preview images](./docs/preview-assets.md).
 
 ### Production build and preview
 

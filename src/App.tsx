@@ -12,7 +12,7 @@ import {
   useState,
 } from "react";
 import cx from "./cx";
-import { contours, rings, waves } from "./guilloche";
+import { contours, rings } from "./guilloche";
 import ArrowRightIcon from "./icon/ArrowRightIcon";
 import CalendarIcon from "./icon/CalendarIcon";
 import CameraIcon from "./icon/CameraIcon";
@@ -48,10 +48,12 @@ import {
   pointOnDeleteHandle,
   pointOnRotationHandle,
   type RedactionRect,
+  recommendedStrength,
   resizeRect,
   type StrengthValues,
   scaleWatermarkSettings,
   screenToCanvas,
+  strengthPresets,
   type WatermarkSettings,
   wrapWatermarkText,
 } from "./imageLogic";
@@ -63,7 +65,15 @@ import {
   SAMPLE_HEIGHT,
   SAMPLE_WIDTH,
 } from "./rendering/sampleDocument";
-import { renderWatermarkedImage } from "./rendering/watermarkRenderer";
+import {
+  defaultWatermarkSettings,
+  getWatermarkFont,
+  renderWatermarkPreview,
+} from "./rendering/watermarkPreview";
+import {
+  renderWatermarkedImage,
+  WatermarkLayerCache,
+} from "./rendering/watermarkRenderer";
 import type { IconProps } from "./types/icon";
 
 declare const __COMMIT_HASH__: string;
@@ -100,44 +110,15 @@ type StrengthPreset = {
   id: string;
   label: string;
   values: StrengthValues;
-  // Wavy lines drawn on the tile, standing in for the repeated text.
-  swatch: { path: string; strokeWidth: number; opacity: number };
 };
-
-function strengthSwatch(
-  count: number,
-  top: number,
-  gap: number,
-  strokeWidth: number,
-  opacity: number,
-) {
-  return {
-    path: waves(60, count, top, gap, 2.5, 0.25, 0.8),
-    strokeWidth,
-    opacity,
-  };
-}
 
 const watermarkPreset: Preset = {
   title: "Document Watermark",
   description:
     "Add a purpose-specific watermark to ID images without uploading anything. Everything stays local in your browser.",
-  hint: "Start with low opacity, then tune spacing and offsets so key details remain readable.",
+  hint: "Start with Bold, then adjust visibility and coverage so required details remain readable.",
   downloadName: "watermarked-id.png",
-  initialSettings: {
-    text: "Only for verification at [Company]",
-    angle: -32,
-    opacity: 0.4,
-    fontSize: 34,
-    spacingX: 520,
-    spacingY: 180,
-    color: "#353B46",
-    grayscale: false,
-    offsetX: 0,
-    offsetY: 0,
-    lineGap: 12,
-    stagger: 0,
-  },
+  initialSettings: defaultWatermarkSettings,
 };
 
 const steps: ReadonlyArray<{ id: Step; label: string }> = [
@@ -156,42 +137,12 @@ const purposes: readonly Purpose[] = [
   { id: "job", label: "New job", phrase: "employment checks" },
 ];
 
-// Balanced matches the preset's initial settings so a fresh document starts on it.
-const strengthPresets: readonly StrengthPreset[] = [
-  {
-    id: "subtle",
-    label: "Subtle",
-    values: { opacity: 0.22, fontSize: 30, spacingX: 560, spacingY: 220 },
-    swatch: strengthSwatch(3, 8, 6, 0.9, 0.35),
-  },
-  {
-    id: "balanced",
-    label: "Balanced",
-    values: { opacity: 0.4, fontSize: 34, spacingX: 520, spacingY: 180 },
-    swatch: strengthSwatch(5, 6, 4, 1.1, 0.6),
-  },
-  {
-    id: "bold",
-    label: "Bold",
-    values: { opacity: 0.55, fontSize: 44, spacingX: 560, spacingY: 190 },
-    swatch: strengthSwatch(5, 6, 4, 1.8, 0.8),
-  },
-  {
-    id: "dense",
-    label: "Dense",
-    values: { opacity: 0.32, fontSize: 26, spacingX: 360, spacingY: 120 },
-    swatch: strengthSwatch(12, 3, 2, 1, 0.7),
-  },
-];
-
 const colorSwatches = [
   { name: "Graphite", hex: "#353B46" },
   { name: "Blue", hex: "#2F5BEA" },
   { name: "Red", hex: "#B42318" },
   { name: "White", hex: "#FFFFFF" },
 ] as const;
-
-const previewRows = [0, 1, 2, 3, 4, 5, 6] as const;
 
 // Security-print line work, computed once.
 const heroContours = contours();
@@ -207,10 +158,6 @@ const repositoryUrl = "https://github.com/EnriqCG/kycwatermark.com";
 const canCopyImage =
   typeof ClipboardItem !== "undefined" &&
   typeof navigator.clipboard?.write === "function";
-
-function getWatermarkFont(fontSize: number) {
-  return `600 ${fontSize}px "Avenir Next", "Sora", "Manrope", "Trebuchet MS", "Segoe UI", sans-serif`;
-}
 
 function App() {
   return <WatermarkStudio preset={watermarkPreset} />;
@@ -786,13 +733,7 @@ function MiniCard({ watermark = false, children }: MiniCardProps) {
       <span className="h-[52px] w-10 shrink-0 rounded-[5px] bg-[#c9d3cb]" />
       <div className="flex flex-1 flex-col gap-[7px]">{children}</div>
       {watermark && (
-        <div className="absolute -left-[40%] -top-[60%] flex h-[220%] w-[180%] -rotate-[32deg] flex-col justify-center gap-3 whitespace-nowrap text-[10px] font-semibold text-[#353b46] opacity-50">
-          {previewRows.map((row) => (
-            <span key={row} className={cx(row % 2 === 1 && "-ml-10")}>
-              FOR ACME BANK · FOR ACME BANK · FOR ACME BANK · FOR ACME BANK
-            </span>
-          ))}
-        </div>
+        <PatternPreview className="pointer-events-none absolute inset-0 h-full w-full" />
       )}
     </div>
   );
@@ -819,46 +760,14 @@ function SamplePreview({ text }: SamplePreviewProps) {
       source.height = SAMPLE_HEIGHT;
       const redactions = drawSampleDocument(sourceContext);
 
-      const settings = watermarkPreset.initialSettings;
-      const scaled = scaleWatermarkSettings(
-        settings,
-        getScaleFactor(SAMPLE_WIDTH, SAMPLE_HEIGHT),
-      );
-      const font = getWatermarkFont(scaled.fontSize);
-      context.font = font;
-      const { lines, textWidth } = wrapWatermarkText(
+      renderWatermarkPreview(
+        context,
+        source,
         text,
-        scaled.spacingX - scaled.fontSize * 0.6,
-        (line) => context.measureText(line).width,
-      );
-      const spacing = getEffectiveWatermarkSpacing(
-        lines,
-        textWidth,
-        scaled.fontSize,
-        scaled.spacingX,
-        scaled.spacingY,
-        scaled.lineGap,
-      );
-
-      renderWatermarkedImage(context, source, {
-        width: SAMPLE_WIDTH,
-        height: SAMPLE_HEIGHT,
-        watermarked: true,
-        grayscale: settings.grayscale,
+        defaultWatermarkSettings,
         redactions,
-        lines,
-        opacity: settings.opacity,
-        color: settings.color,
-        font,
-        angleDegrees: settings.angle,
-        offsetX: scaled.offsetX,
-        offsetY: scaled.offsetY,
-        spacingX: spacing.spacingX,
-        spacingY: spacing.spacingY,
-        fontSize: scaled.fontSize,
-        lineGap: scaled.lineGap,
-        stagger: scaled.stagger,
-      });
+      );
+      source.width = source.height = 0;
     });
 
     return () => {
@@ -872,7 +781,7 @@ function SamplePreview({ text }: SamplePreviewProps) {
       width={SAMPLE_WIDTH}
       height={SAMPLE_HEIGHT}
       role="img"
-      aria-label="Sample ID card with three details blacked out and a repeating watermark"
+      aria-label="Sample ID card with three details blacked out and dense woven watermark text"
       className="block h-auto w-full rounded-[3%/4.75%] bg-specimen shadow-[0_30px_60px_-24px_rgba(16,36,29,0.3),0_2px_6px_rgba(16,36,29,0.08)]"
     />
   );
@@ -946,6 +855,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
   const [fileName, setFileName] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [patternSeed, setPatternSeed] = useState(0);
   const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("watermarked");
   const [isDragActive, setIsDragActive] = useState(false);
@@ -964,6 +874,31 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const watermarkLayer = useRef<WatermarkLayerCache | null>(null);
+  if (!watermarkLayer.current)
+    watermarkLayer.current = new WatermarkLayerCache();
+  const [fontRevision, setFontRevision] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const refresh = () => {
+      watermarkLayer.current?.clear();
+      if (alive) setFontRevision((revision) => revision + 1);
+    };
+    document.fonts.ready.then(() => {
+      if (alive) refresh();
+    });
+    document.fonts.addEventListener("loadingdone", refresh);
+    return () => {
+      alive = false;
+      document.fonts.removeEventListener("loadingdone", refresh);
+      watermarkLayer.current?.clear();
+    };
+  }, []);
+  useEffect(() => {
+    if (!loadedImage) watermarkLayer.current?.clear();
+    // Release the previous document even when the next screen has no canvas.
+    return () => watermarkLayer.current?.clear();
+  }, [loadedImage]);
   const dragDepth = useRef(0);
   const interactionMode = useRef<InteractionMode>("idle");
   const dragStart = useRef({ x: 0, y: 0 });
@@ -998,6 +933,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
   const {
     fontSize: scaledFontSize,
+    wovenFontSize: scaledWovenFontSize,
     spacingX: scaledSpacingX,
     spacingY: scaledSpacingY,
     lineGap: scaledLineGap,
@@ -1016,6 +952,8 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     [scaledSpacingX, scaledFontSize],
   );
 
+  // Font loading changes metrics even when the CSS font string stays identical.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fontRevision invalidates external font metrics.
   const { lines, textWidth } = useMemo(() => {
     const text = watermarkText.trim();
     if (!text) return { lines: [], textWidth: 0 };
@@ -1034,7 +972,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
       maxLineWidth,
       (line) => ctx.measureText(line).width,
     );
-  }, [watermarkText, fontString, maxLineWidth, scaledFontSize]);
+  }, [watermarkText, fontString, maxLineWidth, scaledFontSize, fontRevision]);
 
   const { spacingX: effectiveSpacingX, spacingY: effectiveSpacingY } = useMemo(
     () =>
@@ -1346,36 +1284,80 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
   // Draws into the editor canvas, or into the landing page's draft preview.
   const drawDocument = useCallback(
-    (canvas: HTMLCanvasElement, showSelectionUI: boolean) => {
+    (
+      canvas: HTMLCanvasElement,
+      showSelectionUI: boolean,
+      mode = previewMode,
+    ) => {
       if (!loadedImage) return;
       const context = canvas.getContext("2d");
       if (!context) return;
 
-      canvas.width = loadedImage.naturalWidth;
-      canvas.height = loadedImage.naturalHeight;
+      if (canvas.width !== loadedImage.naturalWidth)
+        canvas.width = loadedImage.naturalWidth;
+      if (canvas.height !== loadedImage.naturalHeight)
+        canvas.height = loadedImage.naturalHeight;
 
-      const allRects = activeRect ? [...redactions, activeRect] : redactions;
-      renderWatermarkedImage(context, loadedImage, {
-        width: canvas.width,
-        height: canvas.height,
-        watermarked: previewMode === "watermarked",
-        grayscale: settings.grayscale,
-        redactions: allRects,
-        lines,
-        opacity: settings.opacity,
-        color: settings.color,
-        font: fontString,
-        angleDegrees: settings.angle,
-        offsetX: scaledOffsetX,
-        offsetY: scaledOffsetY,
+      // An export can resume after fonts finish loading, before React has
+      // committed the new measured preview. Measure its Straight wrapping now.
+      let renderLines = lines;
+      let spacing = {
         spacingX: effectiveSpacingX,
         spacingY: effectiveSpacingY,
-        fontSize: scaledFontSize,
-        lineGap: scaledLineGap,
-        stagger: scaledStagger,
-      });
+      };
+      if (!showSelectionUI && settings.pattern === "text") {
+        context.font = fontString;
+        const layout = wrapWatermarkText(
+          watermarkText,
+          maxLineWidth,
+          (line) => context.measureText(line).width,
+        );
+        renderLines = layout.lines;
+        spacing = getEffectiveWatermarkSpacing(
+          layout.lines,
+          layout.textWidth,
+          scaledFontSize,
+          scaledSpacingX,
+          scaledSpacingY,
+          scaledLineGap,
+        );
+      }
 
-      if (previewMode !== "watermarked") return;
+      const allRects = activeRect ? [...redactions, activeRect] : redactions;
+      renderWatermarkedImage(
+        context,
+        loadedImage,
+        {
+          width: canvas.width,
+          height: canvas.height,
+          watermarked: mode === "watermarked",
+          grayscale: settings.grayscale,
+          redactions: allRects,
+          lines: renderLines,
+          text: watermarkText,
+          fontRevision,
+          opacity: settings.opacity,
+          color: settings.color,
+          font: fontString,
+          angleDegrees: settings.angle,
+          offsetX: scaledOffsetX,
+          offsetY: scaledOffsetY,
+          spacingX: spacing.spacingX,
+          spacingY: spacing.spacingY,
+          fontSize: scaledFontSize,
+          lineGap: scaledLineGap,
+          stagger: scaledStagger,
+          pattern: settings.pattern,
+          textureDensity: settings.textureDensity,
+          wovenFontSize: scaledWovenFontSize,
+          waveFrequency: settings.waveFrequency,
+          letterWarp: settings.letterWarp,
+          patternSeed,
+        },
+        watermarkLayer.current ?? undefined,
+      );
+
+      if (mode !== "watermarked") return;
 
       // Layer 4: Selection UI overlay (not exported)
       if (
@@ -1454,12 +1436,19 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
       effectiveSpacingX,
       effectiveSpacingY,
       fontString,
+      fontRevision,
+      maxLineWidth,
+      scaledSpacingX,
+      scaledSpacingY,
+      watermarkText,
       handleScale,
       lines,
       loadedImage,
+      patternSeed,
       previewMode,
       redactions,
       scaledFontSize,
+      scaledWovenFontSize,
       scaledLineGap,
       scaledOffsetX,
       scaledOffsetY,
@@ -1470,7 +1459,10 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
   );
 
   useEffect(() => {
-    if (canvasElement) drawDocument(canvasElement, true);
+    const frame = requestAnimationFrame(() => {
+      if (canvasElement) drawDocument(canvasElement, true);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [canvasElement, drawDocument]);
 
   const updateSetting = <K extends keyof WatermarkSettings>(
@@ -1494,6 +1486,7 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
 
     const nextUrl = URL.createObjectURL(file);
 
+    setPatternSeed(crypto.getRandomValues(new Uint32Array(1))[0]);
     setImageUrl(nextUrl);
     setFileName(file.name);
     setRedactions([]);
@@ -1617,21 +1610,30 @@ function WatermarkStudio({ preset }: WatermarkStudioProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
 
-  const renderExportBlob = () =>
-    new Promise<Blob>((resolve, reject) => {
-      const canvas = canvasElement;
-      if (!canvas || !loadedImage) {
+  const renderExportBlob = async () => {
+    await document.fonts.ready;
+    return new Promise<Blob>((resolve, reject) => {
+      if (!loadedImage) {
         reject(new Error("No document is open."));
         return;
       }
 
-      drawDocument(canvas, false);
-      canvas.toBlob((blob) => {
-        drawDocument(canvas, true);
-        if (blob) resolve(blob);
-        else reject(new Error("Could not export the image."));
-      }, "image/png");
+      // Export independently of the editor's comparison / selection state.
+      // Never redraw or encode the preview canvas, which may show the original.
+      const canvas = document.createElement("canvas");
+      try {
+        drawDocument(canvas, false, "watermarked");
+        canvas.toBlob((blob) => {
+          canvas.width = canvas.height = 0;
+          if (blob) resolve(blob);
+          else reject(new Error("Could not export the image."));
+        }, "image/png");
+      } catch (error) {
+        canvas.width = canvas.height = 0;
+        reject(error);
+      }
     });
+  };
 
   const handleDownload = () => {
     renderExportBlob().then(
@@ -2282,6 +2284,31 @@ function WatermarkPanel({
       </div>
 
       <fieldset>
+        <legend className="field-label">Pattern</legend>
+        <div className="segmented mt-2">
+          {(["woven", "text"] as const).map((pattern) => (
+            <button
+              key={pattern}
+              type="button"
+              className={cx(
+                "segmented-btn",
+                settings.pattern === pattern && "is-active",
+              )}
+              aria-pressed={settings.pattern === pattern}
+              onClick={() => onSettingChange("pattern", pattern)}
+            >
+              {pattern === "woven" ? "Woven" : "Straight text"}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-[13px] text-ink-3">
+          {settings.pattern === "woven"
+            ? "Your text forms dense, flowing lines across the document."
+            : "Larger repeating text with more open space between marks."}
+        </p>
+      </fieldset>
+
+      <fieldset>
         <legend className="field-label">Strength</legend>
         <div className="mt-2 grid grid-cols-4 gap-2">
           {strengthPresets.map((strength) => (
@@ -2295,11 +2322,17 @@ function WatermarkPanel({
               aria-pressed={activeStrength?.id === strength.id}
               onClick={() => onStrengthChange(strength)}
             >
-              <StrengthPreview swatch={strength.swatch} />
+              <StrengthPreview
+                values={strength.values}
+                pattern={settings.pattern}
+              />
               {strength.label}
             </button>
           ))}
         </div>
+        <p className="mt-2 text-[13px] text-ink-3">
+          Bold is recommended. Check that required details are still readable.
+        </p>
       </fieldset>
 
       <details className="group rounded-[14px] border border-line">
@@ -2323,17 +2356,26 @@ function WatermarkPanel({
             <RangeControl
               name="wm-font-size"
               label="Text size"
-              valueLabel={`${settings.fontSize}px`}
-              min={18}
-              max={64}
-              step={1}
-              value={settings.fontSize}
-              onChange={(value) => onSettingChange("fontSize", value)}
+              valueLabel={`${settings.pattern === "woven" ? settings.wovenFontSize : settings.fontSize}px`}
+              min={settings.pattern === "woven" ? 6 : 18}
+              max={settings.pattern === "woven" ? 22 : 64}
+              step={settings.pattern === "woven" ? 0.5 : 1}
+              value={
+                settings.pattern === "woven"
+                  ? settings.wovenFontSize
+                  : settings.fontSize
+              }
+              onChange={(value) =>
+                onSettingChange(
+                  settings.pattern === "woven" ? "wovenFontSize" : "fontSize",
+                  value,
+                )
+              }
             />
             <RangeControl
               name="wm-angle"
               label="Direction"
-              hint="Angle of the repeated text"
+              hint="Angle of the text and curves"
               valueLabel={`${settings.angle}°`}
               min={-60}
               max={60}
@@ -2393,53 +2435,96 @@ function WatermarkPanel({
           </FineTuneGroup>
 
           <FineTuneGroup title="Pattern">
-            <RangeControl
-              name="wm-spacing-x"
-              label="Horizontal gap"
-              valueLabel={`${settings.spacingX}px`}
-              min={150}
-              max={800}
-              step={5}
-              value={settings.spacingX}
-              onChange={(value) => onSettingChange("spacingX", value)}
-              footer={`Rendered gap: ${Math.round(effectiveSpacingX)}px`}
-            />
-            <RangeControl
-              name="wm-spacing-y"
-              label="Vertical gap"
-              valueLabel={`${settings.spacingY}px`}
-              min={80}
-              max={400}
-              step={5}
-              value={settings.spacingY}
-              onChange={(value) => onSettingChange("spacingY", value)}
-              footer={`Rendered gap: ${Math.round(effectiveSpacingY)}px`}
-            />
-            <RangeControl
-              name="wm-stagger"
-              label="Alternate-row shift"
-              hint="Offsets every other row"
-              valueLabel={`${settings.stagger}px`}
-              min={-200}
-              max={200}
-              step={5}
-              value={settings.stagger}
-              onChange={(value) => onSettingChange("stagger", value)}
-            />
-            <RangeControl
-              name="wm-line-gap"
-              label="Wrapped-line spacing"
-              valueLabel={`${settings.lineGap}px`}
-              min={6}
-              max={40}
-              step={1}
-              value={settings.lineGap}
-              disabled={lineCount <= 1}
-              onChange={(value) => onSettingChange("lineGap", value)}
-              footer={
-                lineCount <= 1 ? "Only applies when the text wraps" : undefined
-              }
-            />
+            {settings.pattern === "woven" && (
+              <>
+                <RangeControl
+                  name="wm-texture-density"
+                  label="Text density"
+                  hint="Bring the wavy text lines closer together"
+                  valueLabel={`${Math.round(settings.textureDensity * 100)}%`}
+                  min={0.2}
+                  max={1}
+                  step={0.05}
+                  value={settings.textureDensity}
+                  onChange={(value) => onSettingChange("textureDensity", value)}
+                />
+                <RangeControl
+                  name="wm-wave-frequency"
+                  label="Wave frequency"
+                  hint="More ripples along each line"
+                  valueLabel={`${settings.waveFrequency}×`}
+                  min={1}
+                  max={5}
+                  step={0.25}
+                  value={settings.waveFrequency}
+                  onChange={(value) => onSettingChange("waveFrequency", value)}
+                />
+                <RangeControl
+                  name="wm-letter-warp"
+                  label="Letter variation"
+                  hint="Bend and shape letters; vary the flow gradually"
+                  valueLabel={`${Math.round(settings.letterWarp * 100)}%`}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={settings.letterWarp}
+                  onChange={(value) => onSettingChange("letterWarp", value)}
+                />
+              </>
+            )}
+            {settings.pattern === "text" && (
+              <>
+                <RangeControl
+                  name="wm-spacing-x"
+                  label="Horizontal gap"
+                  valueLabel={`${settings.spacingX}px`}
+                  min={150}
+                  max={800}
+                  step={5}
+                  value={settings.spacingX}
+                  onChange={(value) => onSettingChange("spacingX", value)}
+                  footer={`Rendered gap: ${Math.round(effectiveSpacingX)}px`}
+                />
+                <RangeControl
+                  name="wm-spacing-y"
+                  label="Vertical gap"
+                  valueLabel={`${settings.spacingY}px`}
+                  min={80}
+                  max={400}
+                  step={5}
+                  value={settings.spacingY}
+                  onChange={(value) => onSettingChange("spacingY", value)}
+                  footer={`Rendered gap: ${Math.round(effectiveSpacingY)}px`}
+                />
+                <RangeControl
+                  name="wm-stagger"
+                  label="Row shift"
+                  hint="Offsets each row from the one above"
+                  valueLabel={`${settings.stagger}px`}
+                  min={-200}
+                  max={200}
+                  step={5}
+                  value={settings.stagger}
+                  onChange={(value) => onSettingChange("stagger", value)}
+                />
+                <RangeControl
+                  name="wm-line-gap"
+                  label="Wrapped-line spacing"
+                  valueLabel={`${settings.lineGap}px`}
+                  min={6}
+                  max={40}
+                  step={1}
+                  value={settings.lineGap}
+                  disabled={lineCount <= 1}
+                  onChange={(value) => onSettingChange("lineGap", value)}
+                  footer={
+                    lineCount <= 1
+                      ? "Only applies when the text wraps"
+                      : undefined
+                  }
+                />
+              </>
+            )}
           </FineTuneGroup>
 
           <FineTuneGroup title="Position">
@@ -2525,29 +2610,73 @@ function WatermarkPanel({
 }
 
 type StrengthPreviewProps = {
-  swatch: StrengthPreset["swatch"];
+  values: StrengthValues;
+  pattern: WatermarkSettings["pattern"];
 };
 
-function StrengthPreview({ swatch }: StrengthPreviewProps) {
+// The thumbnails show a crop of the real pattern, not decorative stand-ins.
+function StrengthPreview({ values, pattern }: StrengthPreviewProps) {
   return (
-    <span
-      aria-hidden="true"
-      className="block h-10 overflow-hidden rounded-lg bg-specimen"
-    >
-      <svg
-        viewBox="0 0 60 28"
-        preserveAspectRatio="none"
-        aria-hidden="true"
+    <PatternPreview
+      values={values}
+      pattern={pattern}
+      detail
+      className="block h-10 w-full overflow-hidden rounded-lg bg-specimen"
+    />
+  );
+}
+
+function PatternPreview({
+  values = recommendedStrength.values,
+  pattern = "woven",
+  detail = false,
+  className,
+}: {
+  values?: StrengthValues;
+  pattern?: WatermarkSettings["pattern"];
+  detail?: boolean;
+  className: string;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    document.fonts.ready.then(() => {
+      const context = canvasRef.current?.getContext("2d");
+      if (cancelled || !context) return;
+      const source = document.createElement("canvas");
+      const rendered = document.createElement("canvas");
+      source.width = rendered.width = 1000;
+      source.height = rendered.height = 630;
+      const drawing = rendered.getContext("2d");
+      try {
+        if (!drawing) return;
+        renderWatermarkPreview(drawing, source, "Only for Acme Bank", {
+          ...defaultWatermarkSettings,
+          ...values,
+          pattern,
+        });
+        context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+        if (detail && pattern === "woven") {
+          context.drawImage(rendered, 380, 243, 240, 144, 0, 0, 720, 432);
+        } else {
+          context.drawImage(rendered, 0, 0, 720, 432);
+        }
+      } finally {
+        source.width = source.height = rendered.width = rendered.height = 0;
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [values, pattern, detail]);
+  return (
+    <span aria-hidden="true" className={className}>
+      <canvas
+        ref={canvasRef}
+        width={720}
+        height={432}
         className="block h-full w-full"
-      >
-        <path
-          d={swatch.path}
-          fill="none"
-          stroke="#353b46"
-          strokeWidth={swatch.strokeWidth}
-          opacity={swatch.opacity}
-        />
-      </svg>
+      />
     </span>
   );
 }
@@ -2640,6 +2769,7 @@ function RangeControl({
         max={max}
         step={step}
         value={value}
+        aria-valuetext={valueLabel}
         disabled={disabled}
         onChange={(event) => onChange(Number(event.target.value))}
         className="range-input mt-2"

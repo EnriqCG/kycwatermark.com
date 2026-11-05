@@ -37,9 +37,11 @@ export class SoftwareCanvasContext {
     this.canvas = { width, height };
     this.pixels = new Uint8ClampedArray(width * height * 4);
     this.stack = [];
-    this.state = { transform: identity, alpha: 1, fillStyle: "#000000", filter: "none", font: "10px test", textAlign: "start", textBaseline: "alphabetic" };
+    this.state = { transform: identity, alpha: 1, composite: "source-over", fillStyle: "#000000", filter: "none", font: "10px test", textAlign: "start", textBaseline: "alphabetic" };
   }
 
+  get globalCompositeOperation() { return this.state.composite; }
+  set globalCompositeOperation(value) { this.state.composite = value; }
   get filter() { return this.state.filter; }
   set filter(value) { this.state.filter = value; }
   get globalAlpha() { return this.state.alpha; }
@@ -61,22 +63,31 @@ export class SoftwareCanvasContext {
     }
   }
   translate(x, y) { this.state.transform = multiply(this.state.transform, [1, 0, 0, 1, x, y]); }
+  transform(a, b, c, d, e, f) { this.state.transform = multiply(this.state.transform, [a, b, c, d, e, f]); }
   rotate(angle) { this.state.transform = multiply(this.state.transform, [Math.cos(angle), Math.sin(angle), -Math.sin(angle), Math.cos(angle), 0, 0]); }
 
   blendPixel(x, y, color) {
     if (x < 0 || y < 0 || x >= this.canvas.width || y >= this.canvas.height) return;
     const index = (y * this.canvas.width + x) * 4;
     const alpha = (color[3] / 255) * this.state.alpha;
-    for (let channel = 0; channel < 3; channel++) this.pixels[index + channel] = Math.round(color[channel] * alpha + this.pixels[index + channel] * (1 - alpha));
-    this.pixels[index + 3] = Math.round(255 * alpha + this.pixels[index + 3] * (1 - alpha));
+    const destinationAlpha = this.pixels[index + 3] / 255;
+    if (this.state.composite === "lighter") {
+      const resultAlpha = Math.min(1, alpha + destinationAlpha);
+      for (let channel=0;channel<3;channel++) this.pixels[index+channel] = resultAlpha === 0 ? 0 : Math.round(Math.min(255, color[channel]*alpha + this.pixels[index+channel]*destinationAlpha)/resultAlpha);
+      this.pixels[index+3] = Math.round(255*resultAlpha);
+      return;
+    }
+    const resultAlpha = alpha + destinationAlpha * (1 - alpha);
+    for (let channel = 0; channel < 3; channel++) this.pixels[index + channel] = resultAlpha === 0 ? 0 : Math.round((color[channel] * alpha + this.pixels[index + channel] * destinationAlpha * (1 - alpha)) / resultAlpha);
+    this.pixels[index + 3] = Math.round(255 * resultAlpha);
   }
 
   fillRect(x, y, width, height) {
     const corners = [[x, y], [x + width, y], [x, y + height], [x + width, y + height]].map(([px, py]) => transformPoint(this.state.transform, px, py));
-    const minX = Math.floor(Math.min(...corners.map((point) => point.x)));
-    const maxX = Math.ceil(Math.max(...corners.map((point) => point.x)));
-    const minY = Math.floor(Math.min(...corners.map((point) => point.y)));
-    const maxY = Math.ceil(Math.max(...corners.map((point) => point.y)));
+    const minX = Math.max(0, Math.floor(Math.min(...corners.map((point) => point.x))));
+    const maxX = Math.min(this.canvas.width, Math.ceil(Math.max(...corners.map((point) => point.x))));
+    const minY = Math.max(0, Math.floor(Math.min(...corners.map((point) => point.y))));
+    const maxY = Math.min(this.canvas.height, Math.ceil(Math.max(...corners.map((point) => point.y))));
     const inverted = inverse(this.state.transform);
     const color = parseColor(this.state.fillStyle);
     for (let py = minY; py < maxY; py++) for (let px = minX; px < maxX; px++) {
@@ -85,10 +96,23 @@ export class SoftwareCanvasContext {
     }
   }
 
-  drawImage(source, _x, _y, width, height) {
-    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-      const sourceX = Math.min(source.width - 1, Math.floor((x / width) * source.width));
-      const sourceY = Math.min(source.height - 1, Math.floor((y / height) * source.height));
+  drawImage(source, ...args) {
+    let sx = 0, sy = 0, sw = source.width, sh = source.height;
+    let dx, dy, dw, dh;
+    if (args.length === 2) [dx, dy, dw, dh] = [...args, sw, sh];
+    else if (args.length === 4) [dx, dy, dw, dh] = args;
+    else [sx, sy, sw, sh, dx, dy, dw, dh] = args;
+    const corners = [[dx, dy], [dx + dw, dy], [dx, dy + dh], [dx + dw, dy + dh]].map(([x, y]) => transformPoint(this.state.transform, x, y));
+    const minX = Math.max(0, Math.floor(Math.min(...corners.map(p => p.x))));
+    const maxX = Math.min(this.canvas.width, Math.ceil(Math.max(...corners.map(p => p.x))));
+    const minY = Math.max(0, Math.floor(Math.min(...corners.map(p => p.y))));
+    const maxY = Math.min(this.canvas.height, Math.ceil(Math.max(...corners.map(p => p.y))));
+    const inverted = inverse(this.state.transform);
+    for (let y = minY; y < maxY; y++) for (let x = minX; x < maxX; x++) {
+      const local = transformPoint(inverted, x + 0.5, y + 0.5);
+      if (local.x < dx || local.x >= dx + dw || local.y < dy || local.y >= dy + dh) continue;
+      const sourceX = Math.min(source.width - 1, Math.max(0, Math.floor(sx + ((local.x - dx) / dw) * sw)));
+      const sourceY = Math.min(source.height - 1, Math.max(0, Math.floor(sy + ((local.y - dy) / dh) * sh)));
       const index = (sourceY * source.width + sourceX) * 4;
       let color = Array.from(source.data.slice(index, index + 4));
       if (this.state.filter === "grayscale(100%)") {
@@ -99,10 +123,16 @@ export class SoftwareCanvasContext {
     }
   }
 
+  measureText(text) {
+    const fontSize = Number.parseFloat(this.state.font.match(/([\d.]+)px/)?.[1] ?? "10");
+    const scale = Math.max(1, Math.round(fontSize / 7));
+    return { width: Math.max(0, text.length * 4 * scale - scale) };
+  }
+
   fillText(text, centerX, centerY) {
     const fontSize = Number.parseFloat(this.state.font.match(/([\d.]+)px/)?.[1] ?? "10");
     const scale = Math.max(1, Math.round(fontSize / 7));
-    const width = Math.max(0, text.length * 4 * scale - scale);
+    const width = this.measureText(text).width;
     const originX = this.state.textAlign === "center" ? centerX - width / 2 : centerX;
     const originY = this.state.textBaseline === "middle" ? centerY - (5 * scale) / 2 : centerY - 5 * scale;
     for (let characterIndex = 0; characterIndex < text.length; characterIndex++) {
@@ -127,4 +157,21 @@ export function makeSyntheticImage(width, height) {
     data[index + 3] = 255;
   }
   return { width, height, data };
+}
+
+
+// Canvas sizing resets its storage and context, as in a browser. Expose .data
+// only for this deterministic raster harness; production uses real canvas APIs.
+export function makeSoftwareCanvas() {
+  let width = 0, height = 0, context;
+  const canvas = {
+    get width() { return width; },
+    set width(value) { width = value; context = new SoftwareCanvasContext(width, height); context.canvas = canvas; },
+    get height() { return height; },
+    set height(value) { height = value; context = new SoftwareCanvasContext(width, height); context.canvas = canvas; },
+    get data() { return context.pixels; },
+    getContext() { return context; },
+  };
+  canvas.width = canvas.height = 0;
+  return canvas;
 }

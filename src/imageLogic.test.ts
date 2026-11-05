@@ -16,9 +16,11 @@ import {
   pointOnDeleteHandle,
   pointOnRotationHandle,
   type RedactionRect,
+  recommendedStrength,
   resizeRect,
   scaleWatermarkSettings,
   screenToCanvas,
+  strengthPresets,
   toLocal,
   type WatermarkSettings,
   wrapWatermarkText,
@@ -45,6 +47,11 @@ function expect<T>(actual: T) {
 }
 
 const settings: WatermarkSettings = {
+  pattern: "woven",
+  textureDensity: 0.75,
+  wovenFontSize: 10,
+  waveFrequency: 3,
+  letterWarp: 0.65,
   text: "Only for verification",
   angle: -32,
   opacity: 0.4,
@@ -69,6 +76,7 @@ describe("watermark sizing and layout", () => {
   it("scales all spatial settings and leaves source settings untouched", () => {
     expect(scaleWatermarkSettings(settings, 0.5)).toEqual({
       fontSize: 17,
+      wovenFontSize: 5,
       spacingX: 260,
       spacingY: 90,
       lineGap: 6,
@@ -347,11 +355,29 @@ describe("watermark text and strength", () => {
   const presets = [
     {
       id: "subtle",
-      values: { opacity: 0.22, fontSize: 30, spacingX: 560, spacingY: 220 },
+      values: {
+        opacity: 0.22,
+        fontSize: 30,
+        spacingX: 560,
+        spacingY: 220,
+        textureDensity: 0.3,
+        wovenFontSize: 12,
+        waveFrequency: 1.75,
+        letterWarp: 0.2,
+      },
     },
     {
       id: "balanced",
-      values: { opacity: 0.4, fontSize: 34, spacingX: 520, spacingY: 180 },
+      values: {
+        opacity: 0.4,
+        fontSize: 34,
+        spacingX: 520,
+        spacingY: 180,
+        textureDensity: 0.75,
+        wovenFontSize: 10,
+        waveFrequency: 3,
+        letterWarp: 0.65,
+      },
     },
   ];
 
@@ -359,9 +385,56 @@ describe("watermark text and strength", () => {
     expect(findMatchingPreset(settings, presets)?.id).toBe("balanced");
   });
 
-  it("returns null once any preset value is changed", () => {
+  it("returns null once an active preset value is changed", () => {
     expect(
-      findMatchingPreset({ ...settings, fontSize: 35 }, presets),
+      findMatchingPreset({ ...settings, wovenFontSize: 35 }, presets),
+    ).toBeNull();
+  });
+
+  it("recognizes the recommended Bold preset in either pattern", () => {
+    for (const pattern of ["woven", "text"] as const) {
+      expect(
+        findMatchingPreset(
+          { ...settings, ...recommendedStrength.values, pattern },
+          strengthPresets,
+        )?.id,
+      ).toBe("bold");
+    }
+  });
+
+  it("ignores controls belonging to the other pattern", () => {
+    expect(
+      findMatchingPreset(
+        {
+          ...settings,
+          ...recommendedStrength.values,
+          pattern: "text",
+          waveFrequency: 4,
+          letterWarp: 0,
+        },
+        strengthPresets,
+      )?.id,
+    ).toBe("bold");
+    expect(
+      findMatchingPreset(
+        {
+          ...settings,
+          ...recommendedStrength.values,
+          pattern: "woven",
+          fontSize: 75,
+          spacingX: 800,
+        },
+        strengthPresets,
+      )?.id,
+    ).toBe("bold");
+  });
+
+  it("treats a coverage adjustment as a custom strength", () => {
+    expect(
+      findMatchingPreset(
+        { ...settings, ...recommendedStrength.values, textureDensity: 0.6 },
+        strengthPresets,
+      ),
     ).toBeNull();
   });
 });
