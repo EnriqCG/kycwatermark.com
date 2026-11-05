@@ -1,6 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect x="6" y="6" width="52" height="52" rx="14" fill="#10241D"/>
-  <rect x="10" y="10" width="44" height="44" rx="11" stroke="#5FD4A4" stroke-opacity="0.85" stroke-width="2.5"/>
-  <path d="M20 22h24M20 32h24M20 42h16" stroke="#FCFCF9" stroke-linecap="round" stroke-width="4"/>
-  <path d="m40 42 5 5 9-11" stroke="#5FD4A4" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"/>
+  <style>
+    .seal { fill: #FCFCF9; stroke: #1D6B50; }
+    .ring { stroke: #1D6B50; }
+    @media (prefers-color-scheme: dark) {
+      .seal { fill: none; stroke: #5FD4A4; }
+      .ring { stroke: #5FD4A4; }
+    }
+  </style>
+  <path class="seal" stroke-width="3.6" d="M32 6A6 6 0 0 1 41.9 8A6 6 0 0 1 50.4 13.6A6 6 0 0 1 56 22.1A6 6 0 0 1 58 32A6 6 0 0 1 56 41.9A6 6 0 0 1 50.4 50.4A6 6 0 0 1 41.9 56A6 6 0 0 1 32 58A6 6 0 0 1 22.1 56A6 6 0 0 1 13.6 50.4A6 6 0 0 1 8 41.9A6 6 0 0 1 6 32A6 6 0 0 1 8 22.1A6 6 0 0 1 13.6 13.6A6 6 0 0 1 22.1 8A6 6 0 0 1 32 6Z"/>
+  <circle class="ring" cx="32" cy="32" r="18.5" stroke-width="3"/>
+  <path fill="#0B0D10" stroke="#FCFCF9" stroke-width="2.4" stroke-linejoin="round" d="M1 22H63L58.5 32L63 42H1L5.5 32Z"/>
 </svg>

@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="./public/logo.svg" width="96" height="96" alt="">
+
 # KYCWatermark.com
 
 **Watermark your ID before you hand it over.**

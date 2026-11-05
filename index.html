@@ -12,12 +12,15 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://kycwatermark.com/" />
     <meta property="og:site_name" content="KYCWatermark.com" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:title" content="Watermark your ID before you hand it over" />
     <meta
       property="og:description"
       content="Add purpose-specific watermarks to ID documents and KYC images directly in your browser. Free, offline, open source. No uploads, no servers."
     />
-    <meta property="og:image" content="https://kycwatermark.com/og-image.jpg" />
+    <!-- Bump ?v= when og-image.jpg changes, so sites that cached the old preview fetch the new one. -->
+    <meta property="og:image" content="https://kycwatermark.com/og-image.jpg?v=2" />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="KYCWatermark.com: &quot;Watermark your ID before you hand it over.&quot;, with &quot;hand it over.&quot; blacked out, next to a sample ID card with three details hidden and a repeating watermark" />
@@ -28,7 +31,8 @@
       name="twitter:description"
       content="Add purpose-specific watermarks to ID documents and KYC images directly in your browser. Free, offline, open source. No uploads, no servers."
     />
-    <meta name="twitter:image" content="https://kycwatermark.com/og-image.jpg" />
+    <meta name="twitter:image" content="https://kycwatermark.com/og-image.jpg?v=2" />
+    <meta name="twitter:image:alt" content="KYCWatermark.com: &quot;Watermark your ID before you hand it over.&quot;, with &quot;hand it over.&quot; blacked out, next to a sample ID card with three details hidden and a repeating watermark" />
 
     <title>KYCWatermark.com — Watermark your ID before you hand it over</title>
 
@@ -47,10 +51,12 @@
           "priceCurrency": "USD"
         },
         "browserRequirements": "Requires JavaScript. Works in Chrome, Firefox, Safari, Edge.",
+        "image": "https://kycwatermark.com/android-chrome-512x512.png",
         "creator": {
           "@type": "Organization",
           "name": "KYCWatermark.com",
-          "url": "https://github.com/EnriqCG/kycwatermark.com"
+          "url": "https://github.com/EnriqCG/kycwatermark.com",
+          "logo": "https://kycwatermark.com/android-chrome-512x512.png"
         }
       }
     </script>
@@ -62,6 +68,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#f4f6f1" />
   </head>
   <body>

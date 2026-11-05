@@ -55,6 +55,7 @@ import {
   type WatermarkSettings,
   wrapWatermarkText,
 } from "./imageLogic";
+import Logo from "./Logo";
 import {
   createSampleDocumentFile,
   drawSampleDocument,
@@ -366,11 +367,11 @@ function LandingPage({
   return (
     <div id="top" className="min-h-screen overflow-x-clip bg-ground text-ink">
       <header className="relative z-10 mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-4 sm:px-6">
-        {/* Logo slot: the logo goes before the wordmark once there is one. */}
         <a
           href="#top"
-          className="shrink-0 font-semibold tracking-[-0.01em] text-ink"
+          className="flex shrink-0 items-center gap-2.5 font-semibold tracking-[-0.01em] text-ink"
         >
+          <Logo className="h-7 w-7" />
           KYCWatermark.com
         </a>
         <nav aria-label="Main" className="flex items-center gap-1">
@@ -633,8 +634,10 @@ function LandingPage({
       </main>
 
       <footer className="mx-auto mt-24 flex max-w-[1200px] flex-wrap items-center justify-between gap-3 border-t border-line px-4 pb-10 pt-6 text-sm text-ink-3 sm:mt-[120px] sm:px-6">
-        {/* Logo slot: a small logo goes before this line once there is one. */}
-        <span>Free · No account · No limits</span>
+        <span className="flex items-center gap-2">
+          <Logo compact className="h-4.5 w-4.5" />
+          Free · No account · No limits
+        </span>
         <span className="font-mono text-[13px]">
           build {__COMMIT_HASH__}
           {import.meta.env.DEV ? "-dev" : ""}
