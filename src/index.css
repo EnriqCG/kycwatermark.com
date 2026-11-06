@@ -21,6 +21,9 @@
     "Geist Variable", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, Menlo, monospace;
   --font-display: "Bodoni Moda Variable", "Bodoni 72", Didot, Georgia, serif;
+  /* Left to the browser, Bodoni picks its display cut at heading sizes, whose
+     hairlines nearly vanish. The text cut keeps headings readable. */
+  --font-display--font-variation-settings: "opsz" 18;
 }
 
 @layer base {
@@ -102,10 +105,10 @@
 
   .section-title {
     font-family: var(--font-display);
+    font-variation-settings: var(--font-display--font-variation-settings);
     font-size: clamp(2rem, 3.6vw, 2.875rem);
-    font-weight: 400;
+    font-weight: 500;
     line-height: 1.08;
-    letter-spacing: -0.015em;
   }
 
   .eyebrow {

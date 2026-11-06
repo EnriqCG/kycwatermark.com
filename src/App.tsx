@@ -361,7 +361,7 @@ function LandingPage({
             <DeviceIcon className="h-4 w-4" />
             Runs in your browser. No data is sent anywhere.
           </p>
-          <h1 className="mt-[22px] max-w-[900px] text-balance font-display text-[clamp(42px,5.6vw,76px)] font-normal leading-[1.02] tracking-[-0.02em]">
+          <h1 className="mt-[22px] max-w-[900px] text-balance font-display text-[clamp(42px,5.6vw,76px)] font-medium leading-[1.02]">
             Watermark your ID before you{" "}
             <RedactedPhrase>hand it over.</RedactedPhrase>
           </h1>
@@ -419,7 +419,7 @@ function LandingPage({
                     <UploadIcon className="h-7 w-7" />
                   </span>
                   <div>
-                    <h2 className="font-display text-[32px] font-medium leading-[1.1] tracking-[-0.01em]">
+                    <h2 className="font-display text-[32px] font-semibold leading-[1.1]">
                       {isDragActive
                         ? "Drop to open it"
                         : "Drop your document here"}
@@ -646,7 +646,7 @@ function DraftSummary({
         In progress
       </span>
       <div className="w-full max-w-sm">
-        <h2 className="font-display text-[30px] font-medium leading-[1.1] tracking-[-0.01em]">
+        <h2 className="font-display text-[30px] font-semibold leading-[1.1]">
           Continue where you left off
         </h2>
         <p
@@ -1985,7 +1985,7 @@ function StepHeading({ step, title, description }: StepHeadingProps) {
       <p className="section-label">
         Step {step} of {steps.length}
       </p>
-      <h2 className="mt-1.5 font-display text-[29px] font-medium leading-[1.12] tracking-[-0.01em] text-ink">
+      <h2 className="mt-1.5 font-display text-[29px] font-semibold leading-[1.12] text-ink">
         {title}
       </h2>
       {description && <p className="mt-2 text-sm text-ink-3">{description}</p>}

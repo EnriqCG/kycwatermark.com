@@ -32,7 +32,7 @@ async function loadIcon(component) {
 
 export async function renderShareImage() {
   await loadSampleFonts();
-  await document.fonts.load('400 72px "Bodoni Moda Variable"');
+  await document.fonts.load('500 18px "Bodoni Moda Variable"');
   await document.fonts.ready;
   const [logo, device] = await Promise.all([loadIcon(Logo), loadIcon(DeviceIcon)]);
   const canvas = document.createElement("canvas");
@@ -75,15 +75,28 @@ export async function renderShareImage() {
   ctx.font = '600 24px "Geist Variable", sans-serif';
   ctx.letterSpacing = "-0.24px";
   ctx.fillText("KYCWatermark.com", 121, 88);
-  ctx.font = '400 72px "Bodoni Moda Variable", serif';
-  ctx.letterSpacing = "-1.44px";
-  ctx.fillText("Watermark your", 72, 212);
-  ctx.fillText("ID before you", 72, 296);
+  // Canvas text can't set font-variation-settings, and Chrome picks Bodoni's
+  // optical size from the font size. Drawing at 18px scaled 4× gives 72px
+  // headings in the same "opsz" 18 cut the page uses.
+  const headingFont = '500 18px "Bodoni Moda Variable", serif';
+  const headingScale = 4;
+  const drawHeading = (text, x, y) => {
+    ctx.save();
+    ctx.scale(headingScale, headingScale);
+    ctx.font = headingFont;
+    ctx.fillText(text, x / headingScale, y / headingScale);
+    ctx.restore();
+  };
+  ctx.letterSpacing = "0px";
+  drawHeading("Watermark your", 72, 212);
+  drawHeading("ID before you", 72, 296);
   const phrase = "hand it over.";
+  ctx.font = headingFont;
+  const phraseWidth = ctx.measureText(phrase).width * headingScale;
   ctx.fillStyle = "#0b0d10";
-  ctx.fillRect(64, 318, ctx.measureText(phrase).width + 16, 72);
+  ctx.fillRect(64, 318, phraseWidth + 16, 72);
   ctx.fillStyle = "#fcfcf9";
-  ctx.fillText(phrase, 72, 380);
+  drawHeading(phrase, 72, 380);
   ctx.fillStyle = "#44564e";
   ctx.letterSpacing = "0px";
   ctx.font = '400 23px "Geist Variable", sans-serif';
